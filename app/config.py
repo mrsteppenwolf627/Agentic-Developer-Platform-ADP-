@@ -51,7 +51,7 @@ class Settings(BaseSettings):
         description="Primary Claude model. Roles: backend, architecture, APIs.",
     )
     gemini_model: str = Field(
-        default="gemini/gemini-2.0-flash",
+        default="gemini/gemini-2.5-flash",
         description="Primary Gemini model. Roles: UI/UX, frontend, components.",
     )
     codex_model: str = Field(
@@ -64,13 +64,13 @@ class Settings(BaseSettings):
     # Index 0 = primary, index 1 = first fallback, index 2 = last fallback
     # ------------------------------------------------------------------
     claude_fallback_chain: List[str] = Field(
-        default=["claude-sonnet-4-6", "openai/gpt-4o", "gemini/gemini-2.0-flash"]
+        default=["claude-sonnet-4-6", "openai/gpt-4o", "gemini/gemini-2.5-flash"]
     )
     gemini_fallback_chain: List[str] = Field(
-        default=["gemini/gemini-2.0-flash", "claude-sonnet-4-6", "openai/gpt-4o"]
+        default=["gemini/gemini-2.5-flash", "claude-sonnet-4-6", "openai/gpt-4o"]
     )
     codex_fallback_chain: List[str] = Field(
-        default=["openai/gpt-4o", "claude-sonnet-4-6", "gemini/gemini-2.0-flash"]
+        default=["openai/gpt-4o", "claude-sonnet-4-6", "gemini/gemini-2.5-flash"]
     )
 
     # ------------------------------------------------------------------

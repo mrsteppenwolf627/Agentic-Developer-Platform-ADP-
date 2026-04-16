@@ -18,10 +18,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.models import Base  # noqa: F401 — imported so metadata is populated
 
-_DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/adp",
-)
+_DATABASE_URL = os.environ.get("DATABASE_URL") or "postgresql+asyncpg://postgres:postgres@localhost:5432/adp"
 
 # Ensure asyncpg driver for runtime
 if _DATABASE_URL.startswith("postgresql://"):

@@ -7,6 +7,7 @@ DATABASE_URL is loaded from the environment or .env file.
 import os
 import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from dotenv import load_dotenv
@@ -14,12 +15,14 @@ from sqlalchemy import engine_from_config, pool
 
 # Make app importable from alembic context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DOTENV_PATH = PROJECT_ROOT / ".env"
 
 from app.models.schemas import Base  # noqa: E402
 
 config = context.config
 
-load_dotenv()
+load_dotenv(dotenv_path=DOTENV_PATH, override=True)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -27,12 +30,13 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Override sqlalchemy.url with env var if set, normalizing asyncpg -> psycopg2
-_db_url = os.getenv("DATABASE_URL", "")
+_db_url = os.getenv("DATABASE_URL")
+if not _db_url:
+    raise ValueError(f"DATABASE_URL not set in {DOTENV_PATH}")
 if _db_url.startswith("postgresql+asyncpg://"):
     _db_url = _db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
-if _db_url:
-    _db_url_escaped = _db_url.replace("%", "%%")
-    config.set_main_option("sqlalchemy.url", _db_url_escaped)
+_db_url_escaped = _db_url.replace("%", "%%")
+config.set_main_option("sqlalchemy.url", _db_url_escaped)
 
 
 def run_migrations_offline() -> None:

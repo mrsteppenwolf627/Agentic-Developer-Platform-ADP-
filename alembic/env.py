@@ -31,7 +31,8 @@ _db_url = os.getenv("DATABASE_URL", "")
 if _db_url.startswith("postgresql+asyncpg://"):
     _db_url = _db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
 if _db_url:
-    config.set_main_option("sqlalchemy.url", _db_url)
+    _db_url_escaped = _db_url.replace("%", "%%")
+    config.set_main_option("sqlalchemy.url", _db_url_escaped)
 
 
 def run_migrations_offline() -> None:

@@ -1,30 +1,33 @@
 """Alembic environment configuration.
 
 Uses synchronous psycopg2 engine for migrations.
-App uses asyncpg at runtime — they share the same DB, different drivers.
-DATABASE_URL env var must use postgresql:// (not postgresql+asyncpg://).
+App uses asyncpg at runtime; they share the same DB with different drivers.
+DATABASE_URL is loaded from the environment or .env file.
 """
 import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
 from alembic import context
+from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
 
 # Make app importable from alembic context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.models.schemas import Base  # noqa: E402 — must come after sys.path insert
+from app.models.schemas import Base  # noqa: E402
 
 config = context.config
+
+load_dotenv()
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url with env var if set, normalizing asyncpg → psycopg2
-_db_url = os.environ.get("DATABASE_URL", "")
+# Override sqlalchemy.url with env var if set, normalizing asyncpg -> psycopg2
+_db_url = os.getenv("DATABASE_URL", "")
 if _db_url.startswith("postgresql+asyncpg://"):
     _db_url = _db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
 if _db_url:
@@ -32,7 +35,7 @@ if _db_url:
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode (no live DB connection required)."""
+    """Run migrations in offline mode."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,

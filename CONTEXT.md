@@ -25,7 +25,7 @@
 | # | Component | Status | Owner | Notes |
 |---|---|---|---|---|
 | 1 | Database Schema | ✅ DONE | Claude | alembic/versions/001 + app/models/ |
-| 2 | LiteLLM Router | ⏳ PENDING | Claude | Agnóstico de modelo |
+| 2 | LiteLLM Router | ✅ DONE | Claude | app/agents/ + app/config.py |
 | 3 | Evaluation Framework | ⏳ PENDING | Codex | Multi-layer evals |
 | 4 | Task Executor | ⏳ PENDING | Claude | Orquestación agentes |
 | 5 | React Dashboard | ⏳ PENDING | Gemini | Mínimo viable |
@@ -89,7 +89,7 @@ PR required: True (si no es trivial)
 (Este log se actualiza después de cada tarea exitosa)
 
 - [x] **Task #1:** DB Schema → Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~09:30
-- [ ] **Task #2:** LiteLLM Router → Completada por [modelo] @ [hora]
+- [x] **Task #2:** LiteLLM Router → Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~10:00
 - [ ] **Task #3:** Task Executor → Completada por [modelo] @ [hora]
 - [ ] **Task #4:** Evaluation Framework → Completada por [modelo] @ [hora]
 - [ ] **Task #5:** React Dashboard → Completada por [modelo] @ [hora]
@@ -99,9 +99,9 @@ PR required: True (si no es trivial)
 
 ## 🔐 ÚLTIMA ACTUALIZACIÓN
 
-- **Fecha:** 2026-04-16 09:30 (Task #1 completada)
+- **Fecha:** 2026-04-16 10:00 (Task #2 completada)
 - **Por:** Claude (claude-sonnet-4-6)
-- **Cambios:** DB Schema + Alembic migrations + ORM models + Pydantic schemas
-- **Archivos creados:** ADRs.md, alembic.ini, alembic/env.py, alembic/versions/001_initial_schema.py, app/models/schemas.py, app/models/__init__.py, app/database.py, .env.example
+- **Cambios:** LiteLLM router + model abstraction + prompt templates + config
+- **Archivos creados:** app/config.py, app/agents/litellm_router.py, app/agents/prompts.py, app/agents/__init__.py, scripts/check_models.py
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

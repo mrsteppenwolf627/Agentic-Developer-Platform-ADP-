@@ -28,8 +28,8 @@
 | 2 | LiteLLM Router | DONE | Claude | app/agents/ + app/config.py |
 | 3 | Evaluation Framework | DONE | Codex | app/services/evaluation_engine.py + app/evaluators/ |
 | 4 | Task Executor | DONE | Claude | app/services/ + app/api/tasks.py |
-| 5 | React Dashboard | PENDING | Gemini | Minimo viable |
-| 6 | Tests + Deployment | PENDING | Codex | CI/CD |
+| 5 | React Dashboard | DONE | Gemini | Minimo viable |
+| 6 | Tests + Deployment | DONE | Codex | CI/CD + mocks |
 
 ---
 
@@ -92,17 +92,16 @@ PR required: True (si no es trivial)
 - [x] **Task #2:** LiteLLM Router -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~10:00
 - [x] **Task #3:** Task Executor -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~10:30
 - [x] **Task #4:** Evaluation Framework -> Completada por Codex (GPT-4o) @ 2026-04-16 ~11:55
-- [ ] **Task #5:** React Dashboard -> Completada por [modelo] @ [hora]
-- [ ] **Task #6:** Tests + Deploy -> Completada por [modelo] @ [hora]
+- [x] **Task #5:** React Dashboard -> Completada por Gemini @ 2026-04-16 ~12:30
+- [x] **Task #6:** Tests + Deploy -> Completada por Codex (GPT-4o) @ 2026-04-16 ~13:05
 
 ---
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-16 12:30 (Task #5 completada)
-- **Por:** Gemini
-- **Cambios:** React dashboard minimo viable (TicketList, TicketDetail, TaskCard, Dashboard layout)
+- **Fecha:** 2026-04-16 13:05 (Task #6 completada, proyecto v0.1 listo)
+- **Por:** Codex (GPT-4o)
+- **Cambios:** Suite de tests backend/frontend con mocks, workflow GitHub Actions CI/CD, README y DEPLOYMENT listos
 - **Archivos creados:** frontend/src/components/*, frontend/src/pages/*, frontend/src/api/client.ts, frontend/src/App.tsx, frontend/public/index.html
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git
-ub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

@@ -388,6 +388,14 @@ class TicketBase(BaseModel):
     required_models: Optional[List[AgentModel]] = None
     context_snapshot: Optional[Dict[str, Any]] = None
 
+    @field_validator("title")
+    @classmethod
+    def normalize_title(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("title cannot be blank")
+        return normalized
+
 
 class TicketCreate(TicketBase):
     pass
@@ -438,6 +446,16 @@ class TaskUpdate(BaseModel):
     output: Optional[str] = None
     execution_log: Optional[Dict[str, Any]] = None
     # assigned_model is IMMUTABLE per ADR-002 — intentionally excluded
+
+    @field_validator("output")
+    @classmethod
+    def validate_output(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("output cannot be blank when provided")
+        return normalized
 
 
 class TaskResponse(TaskBase):

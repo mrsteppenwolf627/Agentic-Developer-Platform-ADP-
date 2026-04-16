@@ -103,6 +103,8 @@ class ContextManager:
         )
         db.add(entry)
         await db.flush()
+        if entry.id is None:
+            entry.id = uuid.uuid4()
 
         logger.info("snapshot_context | task=%s rollback_id=%s git=%s", task_id, entry.id, git_hash)
         return entry.id
@@ -141,27 +143,19 @@ class ContextManager:
         full_ts = completed_dt.strftime("%Y-%m-%d %H:%M")
         content = self.context_path.read_text(encoding="utf-8")
 
-        content = re.sub(
-            r"(\|\s*3\s*\|\s*Evaluation Framework\s*\|\s*)([^|]+)(\s*\|\s*Codex\s*\|)",
-            r"\1DONE\3",
-            content,
-            count=1,
-        )
-        content = re.sub(
-            r"(\|\s*Evaluation Framework\s*\|\s*)([^|]+)(\s*\|\s*Executor\s*\|\s*[^|]+\|)",
-            r"\1DONE\3",
-            content,
-            count=1,
-        )
-        content = re.sub(
-            r"- \[ \] \*\*Task #4:\*\* Evaluation Framework .*",
-            f"- [x] **Task #4:** Evaluation Framework -> Completada por {model_name} @ {ts}",
-            content,
-            count=1,
-        )
+        task_match = re.search(r"Task\s*#\s*(\d+)", task_name, re.IGNORECASE)
+        task_number = task_match.group(1) if task_match else None
+
+        if task_number:
+            content = re.sub(
+                rf"- \[ \] \*\*Task #{task_number}:\*\* .*",
+                f"- [x] **Task #{task_number}:** {task_name} -> Completada por {model_name} @ {ts}",
+                content,
+                count=1,
+            )
         content = re.sub(
             r"- \*\*Fecha:\*\* .+",
-            f"- **Fecha:** {full_ts} (Task #4 completada)",
+            f"- **Fecha:** {full_ts} ({task_name} completada)",
             content,
             count=1,
         )
@@ -173,7 +167,7 @@ class ContextManager:
         )
         content = re.sub(
             r"- \*\*Cambios:\*\* .+",
-            "- **Cambios:** Evaluation Framework + evaluadores multi-capa + API de evaluaciones + integracion con rollback/contexto",
+            f"- **Cambios:** {task_name} completada con soporte actualizado de contexto y auditoria",
             content,
             count=1,
         )

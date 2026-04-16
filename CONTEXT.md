@@ -1,107 +1,107 @@
-# CONTEXT: Technical Factory — AI-Powered SDLC Automation
+# CONTEXT: Technical Factory - AI-Powered SDLC Automation
 
-**Versión:** 1.0  
+**Version:** 1.0  
 **Iniciado:** 2026-04-16 09:00  
 **Plazo:** 6 horas (deployment v0.1 a las 15:00)
 
 ---
 
-## 🏗️ ARQUITECTURA GENERAL
+## ARQUITECTURA GENERAL
 
-**Visión:** Sistema multi-agente orquestado que toma tickets (CRM/Backlog) → descompone en tasks → ejecuta con agentes especializados (Gemini/Claude/Codex) → valida con framework de gobernanza → entrega código validado.
+**Vision:** Sistema multi-agente orquestado que toma tickets (CRM/Backlog) -> descompone en tasks -> ejecuta con agentes especializados (Gemini/Claude/Codex) -> valida con framework de gobernanza -> entrega codigo validado.
 
-**Stack Agnóstico:**
-- Orquestación: FastAPI + LiteLLM
+**Stack Agnostico:**
+- Orquestacion: FastAPI + LiteLLM
 - BD Central: Supabase (PostgreSQL)
-- Evaluación: Braintrust + Codex
+- Evaluacion: Braintrust + Codex
 - Agentes: Gemini (UI), Claude (Backend), Codex (Security/Tests)
-- Rollback: Snapshots automáticos
-- Frontend: React SPA (dashboard mínimo)
+- Rollback: Snapshots automaticos
+- Frontend: React SPA (dashboard minimo)
 
 ---
 
-## 📊 ESTADO ACTUAL
+## ESTADO ACTUAL
 
 | # | Component | Status | Owner | Notes |
 |---|---|---|---|---|
-| 1 | Database Schema | ✅ DONE | Claude | alembic/versions/001 + app/models/ |
-| 2 | LiteLLM Router | ✅ DONE | Claude | app/agents/ + app/config.py |
-| 3 | Evaluation Framework | ⏳ PENDING | Codex | Multi-layer evals |
-| 4 | Task Executor | ✅ DONE | Claude | app/services/ + app/api/tasks.py |
-| 5 | React Dashboard | ⏳ PENDING | Gemini | Mínimo viable |
-| 6 | Tests + Deployment | ⏳ PENDING | Codex | CI/CD |
+| 1 | Database Schema | DONE | Claude | alembic/versions/001 + app/models/ |
+| 2 | LiteLLM Router | DONE | Claude | app/agents/ + app/config.py |
+| 3 | Evaluation Framework | DONE | Codex | app/services/evaluation_engine.py + app/evaluators/ |
+| 4 | Task Executor | DONE | Claude | app/services/ + app/api/tasks.py |
+| 5 | React Dashboard | PENDING | Gemini | Minimo viable |
+| 6 | Tests + Deployment | PENDING | Codex | CI/CD |
 
 ---
 
-## 🎯 BACKLOG PRIORIZADO (6 horas)
+## BACKLOG PRIORIZADO (6 horas)
 
-| Tarea | Tiempo Est. | Asignación | Bloques | Prioridad |
+| Tarea | Tiempo Est. | Asignacion | Bloques | Prioridad |
 |---|:---:|:---:|:---:|:---:|
-| DB Schema + Migrations | 30min | Claude | — | 🔴 P0 |
-| LiteLLM Router Setup | 45min | Claude | DB | 🔴 P0 |
-| Task Executor (orquestación) | 60min | Claude | LiteLLM | 🔴 P0 |
-| Evaluation Framework | 45min | Codex | Executor | 🔴 P0 |
-| React Dashboard (basic) | 45min | Gemini | Executor | 🟠 P1 |
-| Tests + GitHub Actions | 30min | Codex | Todo | 🟠 P1 |
-| Documentation + Deploy | 15min | Cualquiera | Todo | 🟠 P1 |
+| DB Schema + Migrations | 30min | Claude | - | P0 |
+| LiteLLM Router Setup | 45min | Claude | DB | P0 |
+| Task Executor (orquestacion) | 60min | Claude | LiteLLM | P0 |
+| Evaluation Framework | 45min | Codex | Executor | DONE |
+| React Dashboard (basic) | 45min | Gemini | Executor | P1 |
+| Tests + GitHub Actions | 30min | Codex | Todo | P1 |
+| Documentation + Deploy | 15min | Cualquiera | Todo | P1 |
 
-**Total estimado: 250min ≈ 4h 10min** (margen: 1h 50min para debugging/iteración)
+**Total estimado: 250min ~= 4h 10min** (margen: 1h 50min para debugging/iteracion)
 
 ---
 
-## 🔐 RESTRICCIONES CRÍTICAS
+## RESTRICCIONES CRITICAS
 
 - **Plazo:** 6 horas hard stop (15:00 UTC)
-- **Testing:** Mín 70% coverage (MVP)
-- **Seguridad:** Evaluación obligatoria en TODOS los outputs
-- **Compliance:** GDPR readiness (encriptación en tránsito)
+- **Testing:** Min 70% coverage (MVP)
+- **Seguridad:** Evaluacion obligatoria en TODOS los outputs
+- **Compliance:** GDPR readiness (encriptacion en transito)
 - **Zero manual deployments:** CI/CD automatizado
 
 ---
 
-## 🔄 CONVENCIONES GIT
-Commits: git commit -m "Feat: [desc] (via Claude/Gemini/Codex) - Task #X"
-Branches: feature/task-{id}, fix/bug-{id}
+## CONVENCIONES GIT
+Commits: `git commit -m "Feat: [desc] (via Claude/Gemini/Codex) - Task #X"`
+Branches: `feature/task-{id}`, `fix/bug-{id}`
 PR required: True (si no es trivial)
 
 ---
 
-## 📍 NOTAS OPERATIVAS
+## NOTAS OPERATIVAS
 
-- **Validación OBLIGATORIA** antes de sobrescribir CONTEXT.md
-- **Snapshots automáticos** en rollback_stack antes de cada task
-- **Consultar ADRs.md** antes de decisiones arquitectónicas
-- **Logging centralizado** en agent_sessions para auditoría
+- **Validacion OBLIGATORIA** antes de sobrescribir CONTEXT.md
+- **Snapshots automaticos** en `rollback_stack` antes de cada task
+- **Consultar ADRs.md** antes de decisiones arquitectonicas
+- **Logging centralizado** en `agent_sessions` para auditoria
 - **No partial states:** Si algo falla, rollback inmediato
 
 ---
 
-## 🔗 REFERENCIAS
+## REFERENCIAS
 
 - **ADRs.md:** Decisiones congeladas (ADR-001, ADR-002, ADR-003)
-- **Diseño de Datos:** [Ver sección arriba]
-- **Royal Roads:** [Ver patrones de integración]
+- **Diseno de Datos:** [Ver seccion arriba]
+- **Royal Roads:** [Ver patrones de integracion]
 
 ---
 
-## 📋 TAREAS EJECUTADAS HOY
+## TAREAS EJECUTADAS HOY
 
-(Este log se actualiza después de cada tarea exitosa)
+(Este log se actualiza despues de cada tarea exitosa)
 
-- [x] **Task #1:** DB Schema → Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~09:30
-- [x] **Task #2:** LiteLLM Router → Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~10:00
-- [x] **Task #3:** Task Executor → Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~10:30
-- [ ] **Task #4:** Evaluation Framework → Completada por [modelo] @ [hora]
-- [ ] **Task #5:** React Dashboard → Completada por [modelo] @ [hora]
-- [ ] **Task #6:** Tests + Deploy → Completada por [modelo] @ [hora]
+- [x] **Task #1:** DB Schema -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~09:30
+- [x] **Task #2:** LiteLLM Router -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~10:00
+- [x] **Task #3:** Task Executor -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-16 ~10:30
+- [x] **Task #4:** Evaluation Framework -> Completada por Codex (GPT-4o) @ 2026-04-16 ~11:55
+- [ ] **Task #5:** React Dashboard -> Completada por [modelo] @ [hora]
+- [ ] **Task #6:** Tests + Deploy -> Completada por [modelo] @ [hora]
 
 ---
 
-## 🔐 ÚLTIMA ACTUALIZACIÓN
+## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-16 10:30 (Task #3 completada)
-- **Por:** Claude (claude-sonnet-4-6)
-- **Cambios:** Task Executor + Context Manager + FastAPI endpoints + app entry point
-- **Archivos creados:** app/services/task_executor.py, app/services/context_manager.py, app/services/__init__.py, app/api/tasks.py, app/api/__init__.py, app/main.py, requirements.txt
+- **Fecha:** 2026-04-16 11:55 (Task #4 completada)
+- **Por:** Codex (GPT-4o)
+- **Cambios:** Evaluation Framework + evaluadores multi-capa + API de evaluaciones + integracion con rollback/contexto
+- **Archivos creados:** app/services/evaluation_engine.py, app/evaluators/security_evaluator.py, app/evaluators/quality_evaluator.py, app/evaluators/compliance_evaluator.py, app/api/evaluations.py
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

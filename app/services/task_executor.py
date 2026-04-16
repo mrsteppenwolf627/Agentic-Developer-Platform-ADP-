@@ -308,6 +308,25 @@ class TaskExecutor:
             session_id=route_result.session_id,
         )
 
+    async def evaluate_task_output(
+        self,
+        task_id: uuid.UUID,
+        output_code: Optional[str] = None,
+    ):
+        """Run the post-execution governance gate for a task."""
+        from app.services.evaluation_engine import EvaluationEngine
+
+        task = await self._load_task(task_id)
+        if task is None:
+            raise ValueError(f"Task {task_id} not found")
+
+        code_to_evaluate = output_code or task.output
+        if not code_to_evaluate:
+            raise ValueError(f"Task {task_id} has no output to evaluate")
+
+        engine = EvaluationEngine(db=self.db, context_manager=self.ctx)
+        return await engine.evaluate_task_output(task_id=task_id, output_code=code_to_evaluate)
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------

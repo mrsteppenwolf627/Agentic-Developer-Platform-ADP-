@@ -99,9 +99,10 @@ PR required: True (si no es trivial)
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-16 11:55 (Task #4 completada)
-- **Por:** Codex (GPT-4o)
-- **Cambios:** Evaluation Framework + evaluadores multi-capa + API de evaluaciones + integracion con rollback/contexto
-- **Archivos creados:** app/services/evaluation_engine.py, app/evaluators/security_evaluator.py, app/evaluators/quality_evaluator.py, app/evaluators/compliance_evaluator.py, app/api/evaluations.py
+- **Fecha:** 2026-04-16 12:30 (Task #5 completada)
+- **Por:** Gemini
+- **Cambios:** React dashboard minimo viable (TicketList, TicketDetail, TaskCard, Dashboard layout)
+- **Archivos creados:** frontend/src/components/*, frontend/src/pages/*, frontend/src/api/client.ts, frontend/src/App.tsx, frontend/public/index.html
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git
+ub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

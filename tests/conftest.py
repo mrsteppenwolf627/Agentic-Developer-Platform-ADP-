@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import shutil
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -90,8 +92,12 @@ def mock_router():
 
 
 @pytest.fixture
-def mock_context_manager(tmp_path):
-    context_path = tmp_path / "CONTEXT.md"
+def mock_context_manager():
+    tmp_root = Path.cwd() / ".tmp_pytest_context"
+    tmp_root.mkdir(exist_ok=True)
+    context_dir = tmp_root / str(uuid.uuid4())
+    context_dir.mkdir()
+    context_path = context_dir / "CONTEXT.md"
     context_path.write_text(
         "# CONTEXT\n\n## TAREAS EJECUTADAS HOY\n- [ ] **Task #6:** Tests + Deploy -> Completada por [modelo] @ [hora]\n\n## ULTIMA ACTUALIZACION\n- **Fecha:** 2026-04-16 12:30\n- **Por:** Gemini\n- **Cambios:** React dashboard minimo viable\n",
         encoding="utf-8",
@@ -105,7 +111,10 @@ def mock_context_manager(tmp_path):
     ctx.load_context = MagicMock(return_value=ContextState(raw_content=context_path.read_text(encoding="utf-8")))
     ctx.update_context = MagicMock()
     ctx.commit_context = MagicMock(return_value="abc1234")
-    return ctx
+    try:
+        yield ctx
+    finally:
+        shutil.rmtree(context_dir, ignore_errors=True)
 
 
 @pytest.fixture
@@ -185,4 +194,3 @@ def client(mock_db):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
-

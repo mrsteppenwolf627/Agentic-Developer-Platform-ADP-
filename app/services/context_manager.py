@@ -4,11 +4,13 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
+import threading
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Generator, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,6 +79,30 @@ class ContextManager:
 
     def __init__(self, context_path: Optional[Path] = None) -> None:
         self.context_path = context_path or _DEFAULT_CONTEXT_PATH
+        self._context_lock = threading.Lock()
+
+    @contextmanager
+    def _locked(self, operation: str) -> Generator[None, None, None]:
+        """Acquire the context lock with a 5-second timeout."""
+        acquired = self._context_lock.acquire(timeout=5)
+        if not acquired:
+            raise TimeoutError(f"context_lock timeout after 5s | op={operation}")
+        logger.debug("context_lock acquired | op=%s", operation)
+        try:
+            yield
+        finally:
+            self._context_lock.release()
+            logger.debug("context_lock released | op=%s", operation)
+
+    def _read_context_safe(self) -> str:
+        """Read CONTEXT.md with lock held."""
+        with self._locked("read"):
+            return self.context_path.read_text(encoding="utf-8")
+
+    def _write_context_safe(self, content: str) -> None:
+        """Write CONTEXT.md with lock held."""
+        with self._locked("write"):
+            self.context_path.write_text(content, encoding="utf-8")
 
     def load_context(self) -> ContextState:
         """Read CONTEXT.md and return a parsed context snapshot."""
@@ -91,7 +117,7 @@ class ContextManager:
 
     async def snapshot_context(self, task_id: uuid.UUID, db: AsyncSession) -> uuid.UUID:
         """Persist the current CONTEXT.md content to rollback_stack."""
-        content = self.context_path.read_text(encoding="utf-8")
+        content = self._read_context_safe()
         git_hash = _get_git_hash()
 
         entry = RollbackStack(
@@ -122,7 +148,7 @@ class ContextManager:
             logger.info("restore_context | rollback_id=%s already rolled back", rollback_id)
             return True
 
-        self.context_path.write_text(entry.context_md_before, encoding="utf-8")
+        self._write_context_safe(entry.context_md_before)
         entry.state = RollbackState.rolled_back
         logger.warning("restore_context | task=%s rollback_id=%s restored", entry.task_id, rollback_id)
         return True
@@ -141,38 +167,41 @@ class ContextManager:
         completed_dt = completed_at or datetime.now(timezone.utc)
         ts = completed_dt.strftime("%Y-%m-%d ~%H:%M")
         full_ts = completed_dt.strftime("%Y-%m-%d %H:%M")
-        content = self.context_path.read_text(encoding="utf-8")
 
         task_match = re.search(r"Task\s*#\s*(\d+)", task_name, re.IGNORECASE)
         task_number = task_match.group(1) if task_match else None
 
-        if task_number:
+        with self._locked("update_context"):
+            content = self.context_path.read_text(encoding="utf-8")
+
+            if task_number:
+                content = re.sub(
+                    rf"- \[ \] \*\*Task #{task_number}:\*\* .*",
+                    f"- [x] **Task #{task_number}:** {task_name} -> Completada por {model_name} @ {ts}",
+                    content,
+                    count=1,
+                )
             content = re.sub(
-                rf"- \[ \] \*\*Task #{task_number}:\*\* .*",
-                f"- [x] **Task #{task_number}:** {task_name} -> Completada por {model_name} @ {ts}",
+                r"- \*\*Fecha:\*\* .+",
+                f"- **Fecha:** {full_ts} ({task_name} completada)",
                 content,
                 count=1,
             )
-        content = re.sub(
-            r"- \*\*Fecha:\*\* .+",
-            f"- **Fecha:** {full_ts} ({task_name} completada)",
-            content,
-            count=1,
-        )
-        content = re.sub(
-            r"- \*\*Por:\*\* .+",
-            f"- **Por:** {model_name}",
-            content,
-            count=1,
-        )
-        content = re.sub(
-            r"- \*\*Cambios:\*\* .+",
-            f"- **Cambios:** {task_name} completada con soporte actualizado de contexto y auditoria",
-            content,
-            count=1,
-        )
+            content = re.sub(
+                r"- \*\*Por:\*\* .+",
+                f"- **Por:** {model_name}",
+                content,
+                count=1,
+            )
+            content = re.sub(
+                r"- \*\*Cambios:\*\* .+",
+                f"- **Cambios:** {task_name} completada con soporte actualizado de contexto y auditoria",
+                content,
+                count=1,
+            )
 
-        self.context_path.write_text(content, encoding="utf-8")
+            self.context_path.write_text(content, encoding="utf-8")
+
         logger.info("update_context | task=%s model=%s ts=%s", task_name, model_name, ts)
 
     def commit_context(self, task_name: str) -> Optional[str]:

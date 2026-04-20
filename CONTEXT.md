@@ -30,7 +30,8 @@
 | 4 | Task Executor | DONE | Claude | app/services/ + app/api/tasks.py |
 | 5 | React Dashboard | DONE | Gemini | Minimo viable |
 | 6 | Tests + Deployment | DONE | Codex | CI/CD + mocks |
-| 7 | SmartRouter | DONE | Claude | app/agents/smart_router.py — parallel orchestration |
+| 7 | SmartRouter | DONE | Claude | app/agents/smart_router.py - parallel orchestration |
+| 8 | E2E Test SmartRouter con ticket real | DONE | Codex | Ticket 88c61422-84ed-44d0-bfb6-edc98aef8003 validado: 4 componentes, 3 paralelos, 21.8 min, $0.1419 |
 
 ---
 
@@ -61,6 +62,7 @@
 ---
 
 ## CONVENCIONES GIT
+
 Commits: `git commit -m "Feat: [desc] (via Claude/Gemini/Codex) - Task #X"`
 Branches: `feature/task-{id}`, `fix/bug-{id}`
 PR required: True (si no es trivial)
@@ -95,16 +97,17 @@ PR required: True (si no es trivial)
 - [x] **Task #4:** Evaluation Framework -> Completada por Codex (GPT-4o) @ 2026-04-16 ~11:55
 - [x] **Task #5:** React Dashboard -> Completada por Gemini @ 2026-04-16 ~12:30
 - [x] **Task #6:** Tests + Deploy -> Completada por Codex (GPT-4o) @ 2026-04-16 ~13:05
-- [x] **Task #7:** SmartRouter — parallel orchestration + file locking -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-20 ~11:50
+- [x] **Task #7:** SmartRouter - parallel orchestration + file locking -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-20 ~11:50
+- [x] **Task #8:** E2E Test SmartRouter con ticket real -> Completada por Codex (GPT-5) @ 2026-04-20 ~13:17
 
 ---
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-20 11:50 (Task #7 completada — SmartRouter + ContextManager thread-safety)
-- **Por:** Claude (claude-sonnet-4-6)
-- **Cambios:** SmartRouter para paralelización inteligente (asyncio.gather + waves topológicas), file locking en ContextManager (threading.Lock, timeout 5s), 11 tests nuevos
-- **Archivos creados:** app/agents/smart_router.py, tests/test_smart_router.py
-- **Archivos modificados:** app/services/context_manager.py, tests/test_context_manager.py, app/agents/__init__.py
+- **Fecha:** 2026-04-20 13:17 (Task #8 completada - E2E SmartRouter con ticket real)
+- **Por:** Codex (GPT-5)
+- **Cambios:** Test E2E nuevo para SmartRouter con ticket real fullstack; detectados Database, Backend API, Frontend y Tests; 3 componentes paralelos; Tests dependiente de Backend API + Frontend; estimacion total 21.8 min y costo $0.1419; reporte de 4 secciones validado
+- **Archivos creados:** tests/test_smart_router_e2e.py
+- **Archivos modificados:** CONTEXT.md
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

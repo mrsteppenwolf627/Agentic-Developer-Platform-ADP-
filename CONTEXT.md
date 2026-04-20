@@ -30,6 +30,7 @@
 | 4 | Task Executor | DONE | Claude | app/services/ + app/api/tasks.py |
 | 5 | React Dashboard | DONE | Gemini | Minimo viable |
 | 6 | Tests + Deployment | DONE | Codex | CI/CD + mocks |
+| 7 | SmartRouter | DONE | Claude | app/agents/smart_router.py — parallel orchestration |
 
 ---
 
@@ -94,14 +95,16 @@ PR required: True (si no es trivial)
 - [x] **Task #4:** Evaluation Framework -> Completada por Codex (GPT-4o) @ 2026-04-16 ~11:55
 - [x] **Task #5:** React Dashboard -> Completada por Gemini @ 2026-04-16 ~12:30
 - [x] **Task #6:** Tests + Deploy -> Completada por Codex (GPT-4o) @ 2026-04-16 ~13:05
+- [x] **Task #7:** SmartRouter — parallel orchestration + file locking -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-20 ~11:50
 
 ---
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-16 13:05 (Task #6 completada, proyecto v0.1 listo)
-- **Por:** Codex (GPT-4o)
-- **Cambios:** Suite de tests backend/frontend con mocks, workflow GitHub Actions CI/CD, README y DEPLOYMENT listos
-- **Archivos creados:** frontend/src/components/*, frontend/src/pages/*, frontend/src/api/client.ts, frontend/src/App.tsx, frontend/public/index.html
+- **Fecha:** 2026-04-20 11:50 (Task #7 completada — SmartRouter + ContextManager thread-safety)
+- **Por:** Claude (claude-sonnet-4-6)
+- **Cambios:** SmartRouter para paralelización inteligente (asyncio.gather + waves topológicas), file locking en ContextManager (threading.Lock, timeout 5s), 11 tests nuevos
+- **Archivos creados:** app/agents/smart_router.py, tests/test_smart_router.py
+- **Archivos modificados:** app/services/context_manager.py, tests/test_context_manager.py, app/agents/__init__.py
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

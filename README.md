@@ -134,59 +134,35 @@ Nivel 3: LiteLLM Router
 - `tests/test_task_executor_smart_routing.py`
 - `tests/test_e2e_smart_router_real_ticket.py`
 
-## FASE 2: Real Integrations (IN PROGRESS)
+## FASE 2: Real Integrations (🔄 IN PROGRESS)
 
 FASE 2 agrega integraciones bidireccionales con herramientas externas del SDLC real. El objetivo es que ADP deje de vivir solo dentro de su runtime y pueda reaccionar a PRs, issues, mensajes y eventos operativos de sistemas reales.
 
-| Integracion | Estado | Agente | Archivo |
-|---|---|---|---|
-| Slack | 🔄 En desarrollo | Gemini | `app/integrations/slack.py` |
-| Jira | ✅ Implementado | Claude | `app/integrations/jira.py` |
-| GitHub | ✅ Implementado | Codex | `app/integrations/github.py` |
+- Slack: ✅ Implementado
+- Jira: 🔄 En desarrollo (Claude)
+- GitHub: 🔄 En desarrollo (Codex)
 
-### Jira Integration (implementada)
+### Jira Integration (en desarrollo — Claude)
 
-`JiraIntegration` sincroniza Jira issues con ADP tasks de forma bidireccional:
+Sincronizacion bidireccional issues ↔ tasks.
 
-- `sync_issue_to_task(issue_id, issue_key, issue_title, issue_description)` — pull de Jira a ADP
-- `update_issue_on_task_completion(task_id, task_output, issue_key)` — comenta resultado en Jira al completar task
-- `sync_task_status(task_id, status, issue_key)` — espeja transiciones de estado ADP → Jira
-- `handle_jira_webhook(event)` — procesa eventos entrantes de Jira webhooks
+### GitHub Integration (en desarrollo — Codex)
 
-La tabla `jira_mapping` (ver `tables/jira_mapping.sql`) almacena la relacion `issue_key ↔ task_id`.
+Sincronizacion PR -> tasks, code push.
 
-Credenciales requeridas en `.env`:
+### Slack Integration (✅ Implementada)
 
-```env
-JIRA_URL=https://myorg.atlassian.net
-JIRA_EMAIL=user@example.com
-JIRA_TOKEN=your-api-token
-```
+`SlackIntegration` permite notificaciones y aprobaciones via Slack:
+
+- `notify_task_started(task_id, task_name, channel_id)` — notifica inicio de tarea.
+- `notify_task_completed(task_id, task_name, output, channel_id)` — notifica fin de tarea con salida.
+- `request_approval(task_id, critical_component, channel_id)` — pide aprobacion manual.
+- `handle_slack_event(event)` — procesa webhooks de Slack.
 
 Artefactos:
+- Implementacion: `app/integrations/slack.py`
+- Tests: `tests/test_slack_integration.py`
 
-- Implementacion: `app/integrations/jira.py`
-- Mapping SQL: `tables/jira_mapping.sql`
-- Tests: `tests/test_jira_integration.py` (4 tests, todos verdes)
-
-### GitHub Integration (implementada)
-
-`GitHubIntegration` cubre cuatro operaciones base para FASE 2:
-
-- `sync_pr_to_task(...)` valida repo y PR, y extrae referencias a `task_id` desde title/body.
-- `push_code_to_repo(...)` valida branch y crea o actualiza archivos dentro del repo.
-- `update_pr_with_task_status(...)` publica estado y salida resumida de una task en el PR.
-- `handle_github_webhook(...)` procesa `pull_request`, `push` y `ping` para disparar sincronizacion o cierre de estado.
-
-Artefactos:
-
-- Implementacion: `app/integrations/github.py`
-- Mapping SQL: `tables/github_mapping.sql`
-- Tests: `tests/test_github_integration.py`
-
-### Slack Integration (en desarrollo — Gemini)
-
-En desarrollo por Gemini. Objetivo: notificaciones operativas, slash commands y visibilidad de tickets / tasks en tiempo real.
 
 ## Como usar SmartRouter
 

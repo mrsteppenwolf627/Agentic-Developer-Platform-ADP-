@@ -39,6 +39,7 @@
 | 13 | Jira Integration (FASE 2) | DONE | Claude | app/integrations/jira.py - sync bidireccional issues ↔ tasks |
 | 14 | GitHub Integration (FASE 2) | DONE | Codex | app/integrations/github.py - PR ↔ tasks, code push |
 | 15 | Slack Integration (FASE 2) | DONE | Gemini | app/integrations/slack.py - notificaciones y aprobaciones |
+| 17 | Backend Vercel Deploy (FASE 3) | DONE | Claude | Dockerfile + vercel.json - FastAPI containerizado y config Vercel lista |
 
 ### Completado
 
@@ -49,6 +50,7 @@
 - [Slack Integration] Gemini | Notificaciones y aprobaciones via Slack | app/integrations/slack.py
 - [Jira Integration] Claude | Sincronizacion bidireccional issues ↔ tasks | app/integrations/jira.py
 - [GitHub Integration] Codex | Sincronizacion PR ↔ tasks y code push | app/integrations/github.py
+- [Backend Vercel] Claude | FastAPI containerizado + config deploy Vercel | Dockerfile, .dockerignore, vercel.json, .vercelignore
 
 ### En Progreso 🔄
 
@@ -190,15 +192,16 @@ PR required: True (si no es trivial)
 - [x] **Task #13:** Jira Integration (FASE 2) -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-21 ~10:40 | `app/integrations/jira.py`, `tables/jira_mapping.sql`, `tests/test_jira_integration.py`
 - [x] **Task #14:** GitHub Integration (FASE 2) -> Completada por Codex (GPT-5) @ 2026-04-21 ~10:55 | `app/integrations/github.py`, `tables/github_mapping.sql`, `tests/test_github_integration.py`
 - [x] **Task #15:** Slack Integration (FASE 2) -> Completada por Gemini @ 2026-04-21 ~11:30 | `app/integrations/slack.py`, `tests/test_slack_integration.py`
+- [x] **Task #17:** Backend Vercel Deploy (FASE 3) -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-21 ~12:00 | `Dockerfile`, `.dockerignore`, `vercel.json`, `.vercelignore`, `requirements.txt` (httpx añadido)
 
 ---
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-21 11:45 (FASE 2 cerrada - Tasks #13/#14/#15 completadas)
-- **Por:** Claude (claude-sonnet-4-6) - sincronizacion final y push
-- **Cambios:** Task #13 Jira/Claude + Task #14 GitHub/Codex + Task #15 Slack/Gemini. CONTEXT.md y README.md alineados con FASE 2 COMPLETADA. Push final ejecutado.
-- **Archivos creados:** app/integrations/jira.py, app/integrations/github.py, app/integrations/slack.py, tables/jira_mapping.sql, tables/github_mapping.sql, tests/test_jira_integration.py, tests/test_github_integration.py, tests/test_slack_integration.py
-- **Archivos modificados:** README.md, CONTEXT.md
+- **Fecha:** 2026-04-21 12:00 (FASE 3 en progreso - Task #17 Backend Vercel completada)
+- **Por:** Claude (claude-sonnet-4-6) - containerizacion y config Vercel
+- **Cambios:** Task #17 Backend Vercel/Claude. Dockerfile, .dockerignore, vercel.json, .vercelignore creados. httpx añadido a requirements.txt. CONTEXT.md y README.md actualizados con FASE 3 Backend. Commit sin push (Codex hará push final).
+- **Archivos creados:** Dockerfile, .dockerignore, vercel.json, .vercelignore
+- **Archivos modificados:** requirements.txt, README.md, CONTEXT.md
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

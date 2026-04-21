@@ -178,6 +178,48 @@ Artefactos: `app/integrations/jira.py` · `tables/jira_mapping.sql` · `tests/te
 Artefactos: `app/integrations/github.py` · `tables/github_mapping.sql` · `tests/test_github_integration.py`
 
 
+## FASE 3: Scalability & Deployment (🔄 IN PROGRESS)
+
+FASE 3 lleva ADP a produccion: backend containerizado, frontend desplegado y webhooks operativos para integraciones en tiempo real.
+
+| Componente | Estado | Agente | Artefacto |
+|---|---|---|---|
+| Backend Vercel Deploy | ✅ Completado | Claude | `Dockerfile`, `vercel.json` |
+| Frontend Deploy | 🔄 En progreso | Gemini | — |
+| Webhooks | 🔄 En progreso | Codex | — |
+
+### Backend (Claude)
+
+FastAPI containerizado con Python 3.10-slim y listo para deploy en Vercel.
+
+```text
+✅ Containerized (Dockerfile)
+✅ Config Vercel (vercel.json)
+✅ httpx añadido a requirements.txt
+```
+
+Variables de entorno requeridas en Vercel dashboard:
+
+| Variable | Descripcion |
+|---|---|
+| `DATABASE_URL` | Supabase PostgreSQL connection string |
+| `SLACK_BOT_TOKEN` | Token de bot Slack |
+| `JIRA_URL` | URL base de Jira (ej. `https://myorg.atlassian.net`) |
+| `JIRA_EMAIL` | Email de cuenta de servicio Jira |
+| `JIRA_TOKEN` | API token de Jira |
+| `GITHUB_TOKEN` | Personal access token de GitHub |
+
+Deploy via GitHub integration (recomendado): conectar repo en Vercel dashboard → auto-deploy en cada push a `master`.
+
+Deploy via CLI:
+
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+Artefactos: `Dockerfile` · `.dockerignore` · `vercel.json` · `.vercelignore`
+
 ## Como usar SmartRouter
 
 Ejemplo practico desde la capa de servicio:

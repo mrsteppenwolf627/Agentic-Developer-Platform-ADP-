@@ -134,34 +134,48 @@ Nivel 3: LiteLLM Router
 - `tests/test_task_executor_smart_routing.py`
 - `tests/test_e2e_smart_router_real_ticket.py`
 
-## FASE 2: Real Integrations (🔄 IN PROGRESS)
+## FASE 2: Real Integrations (✅ COMPLETED)
 
-FASE 2 agrega integraciones bidireccionales con herramientas externas del SDLC real. El objetivo es que ADP deje de vivir solo dentro de su runtime y pueda reaccionar a PRs, issues, mensajes y eventos operativos de sistemas reales.
+FASE 2 agrega integraciones bidireccionales con herramientas externas del SDLC real. ADP puede ahora reaccionar a PRs, issues, mensajes y eventos operativos de sistemas externos en tiempo real.
 
-- Slack: ✅ Implementado
-- Jira: 🔄 En desarrollo (Claude)
-- GitHub: 🔄 En desarrollo (Codex)
+| Integracion | Estado | Agente | Archivo |
+|---|---|---|---|
+| Slack | ✅ Implementado | Gemini | `app/integrations/slack.py` |
+| Jira | ✅ Implementado | Claude | `app/integrations/jira.py` |
+| GitHub | ✅ Implementado | Codex | `app/integrations/github.py` |
 
-### Jira Integration (en desarrollo — Claude)
-
-Sincronizacion bidireccional issues ↔ tasks.
-
-### GitHub Integration (en desarrollo — Codex)
-
-Sincronizacion PR -> tasks, code push.
-
-### Slack Integration (✅ Implementada)
+### Slack Integration (Gemini)
 
 `SlackIntegration` permite notificaciones y aprobaciones via Slack:
 
 - `notify_task_started(task_id, task_name, channel_id)` — notifica inicio de tarea.
-- `notify_task_completed(task_id, task_name, output, channel_id)` — notifica fin de tarea con salida.
+- `notify_task_completed(task_id, task_name, output, channel_id)` — notifica fin con salida.
 - `request_approval(task_id, critical_component, channel_id)` — pide aprobacion manual.
 - `handle_slack_event(event)` — procesa webhooks de Slack.
 
-Artefactos:
-- Implementacion: `app/integrations/slack.py`
-- Tests: `tests/test_slack_integration.py`
+Artefactos: `app/integrations/slack.py` · `tests/test_slack_integration.py`
+
+### Jira Integration (Claude)
+
+`JiraIntegration` sincroniza Jira issues con ADP tasks de forma bidireccional:
+
+- `sync_issue_to_task(issue_id, issue_key, issue_title, issue_description)` — pull de Jira a ADP.
+- `update_issue_on_task_completion(task_id, task_output, issue_key)` — comenta resultado en Jira.
+- `sync_task_status(task_id, status, issue_key)` — espeja transiciones de estado ADP → Jira.
+- `handle_jira_webhook(event)` — procesa eventos entrantes de Jira webhooks.
+
+Artefactos: `app/integrations/jira.py` · `tables/jira_mapping.sql` · `tests/test_jira_integration.py`
+
+### GitHub Integration (Codex)
+
+`GitHubIntegration` conecta el ciclo de vida de PRs con el pipeline de ADP:
+
+- `sync_pr_to_task(...)` — valida repo/PR y extrae referencias a `task_id`.
+- `push_code_to_repo(...)` — crea o actualiza archivos en un branch.
+- `update_pr_with_task_status(...)` — publica estado de task como comentario en el PR.
+- `handle_github_webhook(...)` — procesa `pull_request`, `push` y `ping`.
+
+Artefactos: `app/integrations/github.py` · `tables/github_mapping.sql` · `tests/test_github_integration.py`
 
 
 ## Como usar SmartRouter

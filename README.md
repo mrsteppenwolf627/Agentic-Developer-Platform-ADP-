@@ -59,6 +59,124 @@ El baseline ya incluye `SmartRouter` para detectar paralelizacion y `TaskExecuto
 - Resultado: `Frontend`, `Backend API` y `Database` paralelos; `Tests` secuencial; `Backend API` camino critico
 - Suite real: `tests/test_e2e_smart_router_real_ticket.py`
 
+## FASE 1: Intelligent Parallelization (COMPLETED)
+
+`SmartRouter` es la capa que analiza la descripcion funcional de un ticket, detecta componentes tecnicos, infiere dependencias y construye un `ExecutionPlan` antes de que se ejecute una sola task. No decide que modelo usar en cada prompt; decide el flujo de trabajo del ticket.
+
+La paralelizacion inteligente significa que ADP no trata todo el ticket como una secuencia lineal. Si `Frontend`, `Backend API` y `Database` no dependen entre si, el sistema los agrupa en una misma wave y los ejecuta en paralelo. Solo las tareas que realmente dependen de esas salidas, como `Tests`, pasan a una wave posterior.
+
+### Como funciona
+
+```text
+Ticket llega
+   |
+   v
+SmartRouter.analyze_task(description)
+   |
+   v
+ExecutionPlan
+  - componentes detectados
+  - dependencias
+  - camino critico
+  - costo / tiempo estimado
+   |
+   v
+Usuario elige modo
+  A -> Human-in-the-Loop
+  B -> Automatizado
+   |
+   v
+TaskExecutor.execute_ticket_with_smart_routing()
+   |
+   +--> Wave 1: tasks paralelos via asyncio.gather()
+   |
+   +--> Wave 2: tasks que dependen de Wave 1
+   |
+   +--> Wave N: tareas finales
+   |
+   v
+ContextManager actualiza CONTEXT.md con lock
+   |
+   v
+ExecutionReport
+  - Fallos
+  - Costo + Tiempo
+  - Paralelizacion
+  - Sugerencias
+```
+
+### Beneficio practico
+
+En una ejecucion secuencial ingenua, 10 tareas de 10 minutos tardarian 100 minutos. Si esas 10 tareas pueden agruparse en 4 waves paralelas de 2 a 3 tareas por wave, el tiempo total puede bajar a ~25 minutos mas overhead, porque el costo temporal deja de ser la suma de todas las tareas y pasa a ser la suma del maximo de cada wave.
+
+### Jerarquia de decision con LiteLLM
+
+```text
+Nivel 1: SmartRouter
+  decide el flujo del ticket
+  decide que va en paralelo y que va en secuencia
+  decide el componente critico
+
+Nivel 2: TaskExecutor
+  ejecuta el plan por waves
+  coordina aprobacion HitL y recolecta resultados
+
+Nivel 3: LiteLLM Router
+  elige el modelo efectivo para cada task
+  aplica fallback entre Claude / Gemini / Codex
+```
+
+### Archivos implementados en FASE 1
+
+- `app/agents/smart_router.py`
+- `app/services/task_executor.py`
+- `app/services/context_manager.py`
+- `tests/test_task_executor_smart_routing.py`
+- `tests/test_e2e_smart_router_real_ticket.py`
+
+## Como usar SmartRouter
+
+Ejemplo practico desde la capa de servicio:
+
+```python
+import uuid
+
+from app.agents.smart_router import ExecutionMode
+from app.services.task_executor import TaskExecutor
+
+executor = TaskExecutor(db=session)
+
+report = await executor.execute_ticket_with_smart_routing(
+    ticket_id=uuid.UUID("0e75d3af-40f3-4f03-93df-eeff72903487"),
+    mode=ExecutionMode.HUMAN_IN_THE_LOOP,
+)
+
+print(report.report_text)
+```
+
+Notas operativas:
+
+- El ticket real validado en PostgreSQL es `0e75d3af-40f3-4f03-93df-eeff72903487`.
+- El UUID `0e75d3af-40f3-4f03-93df-eeff7290348` estaba truncado en el encargo original.
+- `ExecutionMode.HUMAN_IN_THE_LOOP` pide aprobacion sobre la wave critica.
+- `ExecutionMode.AUTOMATED` ejecuta todas las waves sin aprobacion manual.
+
+## Metricas de FASE 1
+
+- Core commits: 3 lineas de entrega principales (`SmartRouter`, integracion en `TaskExecutor`, validacion E2E/documentacion)
+- Tests: `8` tests de integracion en `tests/test_task_executor_smart_routing.py` + `1` E2E real-ticket en `tests/test_e2e_smart_router_real_ticket.py`
+- Core files touched: `5` areas clave (`smart_router.py`, `task_executor.py`, `context_manager.py`, `tests/test_task_executor_smart_routing.py`, `tests/test_e2e_smart_router_real_ticket.py`)
+- Paralelizacion validada: `asyncio.gather()` con timing real y orden por waves confirmado
+
+## Para el proximo developer
+
+- `SmartRouter` es agnostico de modelo: decide flujo, no proveedor LLM.
+- El sistema soporta paralelo y secuencial a la vez; no fuerza una sola estrategia.
+- `CONTEXT.md` es la fuente de verdad operativa y debe mantenerse consistente.
+- El locking de `ContextManager` previene race conditions cuando varias tasks escriben contexto.
+- LiteLLM router decide modelo; `SmartRouter` decide plan y dependencias.
+- La siguiente fase ya no es de paralelizacion base; es de integraciones reales y escalabilidad.
+
 ## Arquitectura de negocio y tecnica
 
 ```text

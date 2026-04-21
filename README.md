@@ -231,6 +231,28 @@ vercel --prod
 
 Artefactos: `Dockerfile` · `.dockerignore` · `vercel.json` · `.vercelignore`
 
+## FASE 3: Verificacion Operativa (2026-04-21)
+
+Esta seccion reemplaza el estado narrativo previo de FASE 3 cuando entre en conflicto con la verificacion realizada el 2026-04-21.
+
+Estado verificado:
+
+- `app/api/webhooks.py` ya expone `POST /webhooks/slack`, `POST /webhooks/jira` y `POST /webhooks/github`.
+- `tests/test_webhooks_e2e.py` valida la capa API local para Slack, Jira y GitHub.
+- Resultado local ejecutado por Codex el 2026-04-21: `3 passed`.
+
+Validacion externa:
+
+- `https://adp-frontend.vercel.app` responde `200`, pero sirve una web ajena a ADP.
+- `https://adp-api.vercel.app/health` responde `404`.
+- `https://adp-api.vercel.app/docs` responde `404`.
+
+Conclusion:
+
+- La implementacion de webhooks en el repo esta lista.
+- El registro real de webhooks en Slack, Jira y GitHub sigue bloqueado hasta confirmar las URLs reales del backend y frontend desplegados.
+- FASE 3 no debe considerarse `PRODUCTION READY` con las URLs actualmente documentadas.
+
 ## Como usar SmartRouter
 
 Ejemplo practico desde la capa de servicio:

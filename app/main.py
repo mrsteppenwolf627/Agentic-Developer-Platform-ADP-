@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.evaluations import router as evaluations_router
 from app.api.tasks import router as tasks_router
+from app.api.webhooks import router as webhooks_router
 from app.config import get_settings
 
 logging.basicConfig(
@@ -47,6 +48,7 @@ app.add_middleware(
 # Routers
 app.include_router(tasks_router)
 app.include_router(evaluations_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/health", tags=["system"])

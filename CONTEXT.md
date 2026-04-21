@@ -43,15 +43,14 @@
 - [ContextManager] Thread-safe locking operativo para proteger escrituras concurrentes sobre `CONTEXT.md`.
 - [E2E Test] Validado con ticket real en PostgreSQL; la paralelizacion fue confirmada con timing real y orden correcto de waves.
 - [GitHub Integration] Codex | Sincronizacion PR -> tasks, code push | `app/integrations/github.py`
+- [Jira Integration] Claude | Sincronizacion bidireccional issues ↔ tasks | `/app/integrations/jira.py`
 
 ### En Progreso 🔄
 
 - [Slack Integration] Gemini | En desarrollo
-- [Jira Integration] Claude | En desarrollo
 
 ### Pendiente
 
-- FASE 2: Integraciones reales con Jira, GitHub y Slack.
 - FASE 3: Escalabilidad, despliegue en Railway y observabilidad.
 - Investigar bug UUID en tabla `tasks` y el uso de IDs truncados en scripts auxiliares / encargos.
 
@@ -190,10 +189,10 @@ PR required: True (si no es trivial)
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-21 10:55 (Task #14 completada - GitHub Integration FASE 2)
-- **Por:** Codex (GPT-5)
-- **Cambios:** Nueva integracion `app/integrations/github.py` con `GitHubIntegration` para validar token, repos, PRs y branches; soporta sincronizacion PR -> task, push de codigo, comentario de estado en PR y dispatch basico de webhooks. Nueva tabla `tables/github_mapping.sql` para mapear PRs a `tasks`. Nueva suite `tests/test_github_integration.py` con mocks para token, sync de PR, push de codigo y webhook. `README.md` y `CONTEXT.md` actualizados para reflejar FASE 2 en progreso: GitHub implementado, Slack y Jira en desarrollo.
-- **Archivos creados:** app/integrations/github.py, tables/github_mapping.sql, tests/test_github_integration.py
-- **Archivos modificados:** README.md, CONTEXT.md, app/integrations/github.py, tables/github_mapping.sql, tests/test_github_integration.py
+- **Fecha:** 2026-04-21 10:55 (Task #13 Jira/Claude + Task #14 GitHub/Codex completadas - FASE 2 parcial)
+- **Por:** Claude (claude-sonnet-4-6) [Task #13] + Codex (GPT-5) [Task #14]
+- **Cambios:** Task #13 - `app/integrations/jira.py` con `JiraIntegration` (4 metodos async: sync_issue_to_task, update_issue_on_task_completion, sync_task_status, handle_jira_webhook), `tables/jira_mapping.sql`, `tests/test_jira_integration.py` (4 tests, todos verdes). Task #14 - `app/integrations/github.py` con `GitHubIntegration`, `tables/github_mapping.sql`, `tests/test_github_integration.py`. `README.md` y `CONTEXT.md` actualizados.
+- **Archivos creados:** app/integrations/jira.py, tables/jira_mapping.sql, tests/test_jira_integration.py, app/integrations/github.py, tables/github_mapping.sql, tests/test_github_integration.py
+- **Archivos modificados:** README.md, CONTEXT.md
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

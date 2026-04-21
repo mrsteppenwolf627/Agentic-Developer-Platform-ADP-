@@ -140,11 +140,36 @@ FASE 2 agrega integraciones bidireccionales con herramientas externas del SDLC r
 
 | Integracion | Estado | Agente | Archivo |
 |---|---|---|---|
-| Slack | En desarrollo | Gemini | `app/integrations/slack.py` |
-| Jira | En desarrollo | Claude | `app/integrations/jira.py` |
-| GitHub | Implementado | Codex | `app/integrations/github.py` |
+| Slack | 🔄 En desarrollo | Gemini | `app/integrations/slack.py` |
+| Jira | ✅ Implementado | Claude | `app/integrations/jira.py` |
+| GitHub | ✅ Implementado | Codex | `app/integrations/github.py` |
 
-### GitHub Integration
+### Jira Integration (implementada)
+
+`JiraIntegration` sincroniza Jira issues con ADP tasks de forma bidireccional:
+
+- `sync_issue_to_task(issue_id, issue_key, issue_title, issue_description)` — pull de Jira a ADP
+- `update_issue_on_task_completion(task_id, task_output, issue_key)` — comenta resultado en Jira al completar task
+- `sync_task_status(task_id, status, issue_key)` — espeja transiciones de estado ADP → Jira
+- `handle_jira_webhook(event)` — procesa eventos entrantes de Jira webhooks
+
+La tabla `jira_mapping` (ver `tables/jira_mapping.sql`) almacena la relacion `issue_key ↔ task_id`.
+
+Credenciales requeridas en `.env`:
+
+```env
+JIRA_URL=https://myorg.atlassian.net
+JIRA_EMAIL=user@example.com
+JIRA_TOKEN=your-api-token
+```
+
+Artefactos:
+
+- Implementacion: `app/integrations/jira.py`
+- Mapping SQL: `tables/jira_mapping.sql`
+- Tests: `tests/test_jira_integration.py` (4 tests, todos verdes)
+
+### GitHub Integration (implementada)
 
 `GitHubIntegration` cubre cuatro operaciones base para FASE 2:
 
@@ -159,13 +184,9 @@ Artefactos:
 - Mapping SQL: `tables/github_mapping.sql`
 - Tests: `tests/test_github_integration.py`
 
-### Slack Integration
+### Slack Integration (en desarrollo — Gemini)
 
 En desarrollo por Gemini. Objetivo: notificaciones operativas, slash commands y visibilidad de tickets / tasks en tiempo real.
-
-### Jira Integration
-
-En desarrollo por Claude. Objetivo: sincronizacion bidireccional entre issues Jira y tasks ADP.
 
 ## Como usar SmartRouter
 

@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'https://agentic-developer-platform-adp.vercel.app';
 
 export interface Ticket {
   id: string;

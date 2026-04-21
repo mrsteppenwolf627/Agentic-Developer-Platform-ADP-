@@ -20,7 +20,7 @@ describe('api client', () => {
 
     const tickets = await api.getTickets();
 
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/tickets');
+    expect(fetch).toHaveBeenCalledWith('https://agentic-developer-platform-adp.vercel.app/api/tickets');
     expect(tickets).toHaveLength(2);
     expect(tickets[0].title).toBe('Task A');
   });
@@ -33,8 +33,7 @@ describe('api client', () => {
 
     const result = await api.executeTask('abc-123');
 
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/tasks/abc-123/execute', { method: 'POST' });
+    expect(fetch).toHaveBeenCalledWith('https://agentic-developer-platform-adp.vercel.app/api/tasks/abc-123/execute', { method: 'POST' });
     expect(result.success).toBe(true);
   });
 });
-

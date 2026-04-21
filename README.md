@@ -134,6 +134,39 @@ Nivel 3: LiteLLM Router
 - `tests/test_task_executor_smart_routing.py`
 - `tests/test_e2e_smart_router_real_ticket.py`
 
+## FASE 2: Real Integrations (IN PROGRESS)
+
+FASE 2 agrega integraciones bidireccionales con herramientas externas del SDLC real. El objetivo es que ADP deje de vivir solo dentro de su runtime y pueda reaccionar a PRs, issues, mensajes y eventos operativos de sistemas reales.
+
+| Integracion | Estado | Agente | Archivo |
+|---|---|---|---|
+| Slack | En desarrollo | Gemini | `app/integrations/slack.py` |
+| Jira | En desarrollo | Claude | `app/integrations/jira.py` |
+| GitHub | Implementado | Codex | `app/integrations/github.py` |
+
+### GitHub Integration
+
+`GitHubIntegration` cubre cuatro operaciones base para FASE 2:
+
+- `sync_pr_to_task(...)` valida repo y PR, y extrae referencias a `task_id` desde title/body.
+- `push_code_to_repo(...)` valida branch y crea o actualiza archivos dentro del repo.
+- `update_pr_with_task_status(...)` publica estado y salida resumida de una task en el PR.
+- `handle_github_webhook(...)` procesa `pull_request`, `push` y `ping` para disparar sincronizacion o cierre de estado.
+
+Artefactos:
+
+- Implementacion: `app/integrations/github.py`
+- Mapping SQL: `tables/github_mapping.sql`
+- Tests: `tests/test_github_integration.py`
+
+### Slack Integration
+
+En desarrollo por Gemini. Objetivo: notificaciones operativas, slash commands y visibilidad de tickets / tasks en tiempo real.
+
+### Jira Integration
+
+En desarrollo por Claude. Objetivo: sincronizacion bidireccional entre issues Jira y tasks ADP.
+
 ## Como usar SmartRouter
 
 Ejemplo practico desde la capa de servicio:

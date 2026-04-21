@@ -1,13 +1,15 @@
 {
-  "buildCommand": "pip install -r requirements.txt",
-  "outputDirectory": ".",
-  "framework": "fastapi",
-  "env": {
-    "DATABASE_URL": "@database-url",
-    "SLACK_BOT_TOKEN": "@slack-bot-token",
-    "JIRA_URL": "@jira-url",
-    "JIRA_EMAIL": "@jira-email",
-    "JIRA_TOKEN": "@jira-token",
-    "GITHUB_TOKEN": "@github-token"
-  }
+  "version": 2,
+  "builds": [
+    {
+      "src": "app/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/main.py"
+    }
+  ]
 }

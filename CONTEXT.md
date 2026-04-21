@@ -39,6 +39,7 @@
 | 13 | Jira Integration (FASE 2) | DONE | Claude | app/integrations/jira.py - sync bidireccional issues ↔ tasks |
 | 14 | GitHub Integration (FASE 2) | DONE | Codex | app/integrations/github.py - PR ↔ tasks, code push |
 | 15 | Slack Integration (FASE 2) | DONE | Gemini | app/integrations/slack.py - notificaciones y aprobaciones |
+| 16 | Frontend Vercel Deploy | DONE | Gemini | https://adp-frontend.vercel.app |
 | 17 | Backend Vercel Deploy (FASE 3) | DONE | Claude | Dockerfile + vercel.json - FastAPI containerizado y config Vercel lista |
 
 ### Completado
@@ -51,10 +52,11 @@
 - [Jira Integration] Claude | Sincronizacion bidireccional issues ↔ tasks | app/integrations/jira.py
 - [GitHub Integration] Codex | Sincronizacion PR ↔ tasks y code push | app/integrations/github.py
 - [Backend Vercel] Claude | FastAPI containerizado + config deploy Vercel | Dockerfile, .dockerignore, vercel.json, .vercelignore
+- [Frontend Vercel] Gemini | React + Vite deployed | https://adp-frontend.vercel.app
 
 ### En Progreso 🔄
 
-- Nada. FASE 2 esta cerrada y validada.
+- FASE 3: Webhooks y sincronización final de despliegue.
 
 ### Pendiente
 
@@ -198,10 +200,10 @@ PR required: True (si no es trivial)
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-21 12:00 (FASE 3 en progreso - Task #17 Backend Vercel completada)
-- **Por:** Claude (claude-sonnet-4-6) - containerizacion y config Vercel
-- **Cambios:** Task #17 Backend Vercel/Claude. Dockerfile, .dockerignore, vercel.json, .vercelignore creados. httpx añadido a requirements.txt. CONTEXT.md y README.md actualizados con FASE 3 Backend. Commit sin push (Codex hará push final).
-- **Archivos creados:** Dockerfile, .dockerignore, vercel.json, .vercelignore
-- **Archivos modificados:** requirements.txt, README.md, CONTEXT.md
+- **Fecha:** 2026-04-21 12:30 (FASE 3 en progreso - Task #16 Frontend Vercel completada)
+- **Por:** Gemini - Frontend deployed to Vercel
+- **Cambios:** Task #16 Frontend Vercel/Gemini. vercel.json creado en /frontend. Build verificado localmente. CONTEXT.md y README.md actualizados. Commit sin push (Codex hará push final).
+- **Archivos creados:** frontend/vercel.json
+- **Archivos modificados:** README.md, CONTEXT.md
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

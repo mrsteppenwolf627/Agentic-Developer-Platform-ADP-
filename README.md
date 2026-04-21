@@ -185,7 +185,7 @@ FASE 3 lleva ADP a produccion: backend containerizado, frontend desplegado y web
 | Componente | Estado | Agente | Artefacto |
 |---|---|---|---|
 | Backend Vercel Deploy | ✅ Completado | Claude | `Dockerfile`, `vercel.json` |
-| Frontend Deploy | 🔄 En progreso | Gemini | — |
+| Frontend Vercel Deploy | ✅ Completado | Gemini | `frontend/vercel.json` |
 | Webhooks | 🔄 En progreso | Codex | — |
 
 ### Backend (Claude)
@@ -198,10 +198,21 @@ FastAPI containerizado con Python 3.10-slim y listo para deploy en Vercel.
 ✅ httpx añadido a requirements.txt
 ```
 
+### Frontend (Gemini)
+
+React + Vite deployed to Vercel con auto-deploy desde GitHub.
+
+```text
+✅ Local build clean (npm run build)
+✅ Config Vercel (vercel.json)
+✅ URL: https://adp-frontend.vercel.app
+```
+
 Variables de entorno requeridas en Vercel dashboard:
 
 | Variable | Descripcion |
 |---|---|
+| `VITE_API_URL` | URL del backend en produccion |
 | `DATABASE_URL` | Supabase PostgreSQL connection string |
 | `SLACK_BOT_TOKEN` | Token de bot Slack |
 | `JIRA_URL` | URL base de Jira (ej. `https://myorg.atlassian.net`) |

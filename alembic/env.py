@@ -1,40 +1,49 @@
-"""Alembic environment configuration.
-
-Uses synchronous psycopg2 engine for migrations.
-App uses asyncpg at runtime; they share the same DB with different drivers.
-DATABASE_URL is loaded from the environment or .env file.
-"""
+﻿"""Alembic environment configuration."""
 import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
-# Make app importable from alembic context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DOTENV_PATH = PROJECT_ROOT / ".env"
 
-from app.models.schemas import Base  # noqa: E402
+from app.models.schemas import Base
 
 config = context.config
 
-load_dotenv(dotenv_path=DOTENV_PATH, override=True)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=str(DOTENV_PATH), override=True)
+    print(f"[Alembic] Loaded .env from: {DOTENV_PATH}")
+except Exception as e:
+    print(f"[Alembic] Warning: Could not load .env: {e}")
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url with env var if set, normalizing asyncpg -> psycopg2
 _db_url = os.getenv("DATABASE_URL")
+
+print(f"[Alembic] DATABASE_URL exists: {bool(_db_url)}")
+if _db_url:
+    print(f"[Alembic] DATABASE_URL (first 60 chars): {_db_url[:60]}...")
+
 if not _db_url:
-    raise ValueError(f"DATABASE_URL not set in {DOTENV_PATH}")
+    raise ValueError(
+        f"DATABASE_URL not set. "
+        f"Check .env file at: {DOTENV_PATH}\n"
+        f".env exists: {DOTENV_PATH.exists()}\n"
+        f"Env vars available: {list(os.environ.keys())}"
+    )
+
 if _db_url.startswith("postgresql+asyncpg://"):
     _db_url = _db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
 _db_url_escaped = _db_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", _db_url_escaped)
 

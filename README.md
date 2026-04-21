@@ -49,6 +49,16 @@ Sin intervencion humana en los pasos intermedios.
 
 Total aproximado de desarrollo efectivo: 4h 45m.
 
+## Estado operativo actual
+
+El baseline ya incluye `SmartRouter` para detectar paralelizacion y `TaskExecutor` para ejecutar waves por dependencias. La validacion E2E mas reciente se hizo contra un ticket real en PostgreSQL:
+
+- Ticket solicitado en el encargo: `0e75d3af-40f3-4f03-93df-eeff7290348`
+- Ticket real encontrado en BD y validado: `0e75d3af-40f3-4f03-93df-eeff72903487`
+- Descripcion validada: "Create a React dashboard with user list, advanced filters, pagination, and API integration with backend validation"
+- Resultado: `Frontend`, `Backend API` y `Database` paralelos; `Tests` secuencial; `Backend API` camino critico
+- Suite real: `tests/test_e2e_smart_router_real_ticket.py`
+
 ## Arquitectura de negocio y tecnica
 
 ```text
@@ -95,6 +105,8 @@ El router decide que modelo ejecutar segun la naturaleza de la tarea. UI y compo
 ### 3. Ejecucion controlada
 
 Antes de ejecutar, ADP toma snapshot de `CONTEXT.md`, valida dependencias y registra la sesion del agente. Si el modelo falla o produce un output invalido, el sistema puede revertir el estado sin dejar residuos parciales.
+
+Con `SmartRouter`, cuando el ticket lo permite, las tareas se agrupan en waves y se ejecutan con `asyncio.gather()` dentro de cada wave. El caso fullstack validado actualmente separa `Frontend`, `Backend API` y `Database` en paralelo, y deja `Tests` para una wave posterior.
 
 ### 4. Validacion multi-capa
 
@@ -339,6 +351,16 @@ npm run dev -- --port 5174
 - Frontend: `npm test -- --coverage`
 - Baseline actual comunicado: 21 tests, 74% coverage backend
 
+### E2E SmartRouter con ticket real
+
+Este test no crea tickets ni tasks. Lee un ticket real desde PostgreSQL y valida el flujo de deteccion de componentes, dependencias, paralelizacion y reporte.
+
+1. Exporta `DATABASE_URL` antes de ejecutar el test real.
+2. Ejecuta `pytest tests/test_e2e_smart_router_real_ticket.py -v -s`.
+3. Verifica que el ticket cargado sea `0e75d3af-40f3-4f03-93df-eeff72903487`.
+
+En este repositorio, `app.database` construye el engine desde `os.environ` y no desde `get_settings()`, asi que si `DATABASE_URL` no esta exportado el runtime intentara conectar a `localhost:5432`.
+
 ## Documentacion generada
 
 - [CONTEXT.md](CONTEXT.md): estado, ownership y operacion del proyecto
@@ -355,6 +377,7 @@ npm run dev -- --port 5174
 - `f273c1a` - Feat: Evaluation framework + multi-layer checks (via Codex) - Task #4
 - `9cd1ac4` - Feat: React dashboard (via Gemini) - Task #5
 - `649a6b3` - Feat: Tests + CI/CD pipeline (via Codex) - Task #6
+- `004001c` - Test: E2E validation of SmartRouter with real ticket (full paralelization flow)
 
 ## Que puede hacer una empresa con esto hoy
 

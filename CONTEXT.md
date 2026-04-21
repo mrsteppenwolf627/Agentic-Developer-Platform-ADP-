@@ -34,6 +34,7 @@
 | 8 | E2E Test SmartRouter con ticket real | DONE | Codex | Ticket 88c61422-84ed-44d0-bfb6-edc98aef8003 validado: 4 componentes, 3 paralelos, 21.8 min, $0.1419 |
 | 9 | Integracion SmartRouter en TaskExecutor | DONE | Codex | `execute_ticket_with_smart_routing()`, waves paralelas con sesiones aisladas, HitL sobre wave critica, 8 tests OK |
 | 10 | E2E Test SmartRouter con ticket real en PostgreSQL | DONE | Codex | Ticket real `0e75d3af-40f3-4f03-93df-eeff72903487` cargado desde BD, 4 componentes detectados, 3 paralelos, Tests secuencial, Backend API critico, reporte validado en orden, `pytest tests/test_e2e_smart_router_real_ticket.py -v -s` OK |
+| 11 | Sync de documentacion operativa | DONE | Codex | `README.md` y `CONTEXT.md` actualizados con ticket real, comando E2E y nota operativa de `DATABASE_URL` |
 
 ---
 
@@ -78,6 +79,8 @@ PR required: True (si no es trivial)
 - **Consultar ADRs.md** antes de decisiones arquitectonicas
 - **Logging centralizado** en `agent_sessions` para auditoria
 - **No partial states:** Si algo falla, rollback inmediato
+- **SmartRouter E2E real:** usar ticket `0e75d3af-40f3-4f03-93df-eeff72903487`; el ID `0e75d3af-40f3-4f03-93df-eeff7290348` estaba truncado en el encargo
+- **Runtime DB:** exportar `DATABASE_URL` antes de ejecutar tests o runtime que lean BD real; `app.database` toma la URL desde `os.environ` y si falta cae a `postgresql+asyncpg://postgres:postgres@localhost:5432/adp`
 
 ---
 
@@ -103,15 +106,16 @@ PR required: True (si no es trivial)
 - [x] **Task #8:** E2E Test SmartRouter con ticket real -> Completada por Codex (GPT-5) @ 2026-04-20 ~13:17
 - [x] **Task #9:** Integracion SmartRouter en TaskExecutor -> Completada por Codex (GPT-5) @ 2026-04-20 ~14:02
 - [x] **Task #10:** E2E Test SmartRouter con ticket real en PostgreSQL -> Completada por Codex (GPT-5) @ 2026-04-21 ~09:46
+- [x] **Task #11:** Sync de documentacion operativa -> Completada por Codex (GPT-5) @ 2026-04-21 ~09:52
 
 ---
 
 ## ULTIMA ACTUALIZACION
 
-- **Fecha:** 2026-04-21 09:46 (Task #10 completada - E2E SmartRouter con ticket real desde PostgreSQL)
+- **Fecha:** 2026-04-21 09:52 (Task #11 completada - documentacion sincronizada para el equipo)
 - **Por:** Codex (GPT-5)
-- **Cambios:** Nueva suite `tests/test_e2e_smart_router_real_ticket.py` que carga el ticket real desde PostgreSQL usando el `DATABASE_URL` del proyecto, corrige el UUID solicitado por prefijo al ticket real `0e75d3af-40f3-4f03-93df-eeff72903487`, ejecuta `SmartRouter.analyze_task(description)`, valida 4 componentes (`Frontend`, `Backend API`, `Database`, `Tests`), comprueba 3 componentes paralelos y `Tests` secuencial, simula ejecucion con `asyncio.gather()` y confirma solapamiento temporal real, y verifica que el reporte mantiene el orden `Fallos -> Costo + Tiempo -> Paralelizacion -> Sugerencias`; `pytest tests/test_e2e_smart_router_real_ticket.py -v -s` en verde
-- **Archivos creados:** tests/test_e2e_smart_router_real_ticket.py
-- **Archivos modificados:** CONTEXT.md
+- **Cambios:** `README.md` y `CONTEXT.md` sincronizados con el estado real del proyecto para que otros agentes no reutilicen el UUID truncado del ticket; documentado el ticket validado `0e75d3af-40f3-4f03-93df-eeff72903487`, el comando `pytest tests/test_e2e_smart_router_real_ticket.py -v -s`, el comportamiento esperado de SmartRouter (3 componentes paralelos + `Tests` secuencial + `Backend API` critico) y la nota operativa de exportar `DATABASE_URL` porque `app.database` lee `os.environ` directamente
+- **Archivos creados:** Ninguno
+- **Archivos modificados:** README.md, CONTEXT.md
 - **Supabase URL:** https://ftzxurbxqqaxcmgsbtbv.supabase.co
 - **GitHub repo:** https://github.com/mrsteppenwolf627/Agentic-Developer-Platform-ADP-.git

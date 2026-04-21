@@ -12,8 +12,10 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.evaluations import router as evaluations_router
 from app.api.tasks import router as tasks_router
@@ -50,6 +52,11 @@ app.include_router(tasks_router)
 app.include_router(evaluations_router)
 app.include_router(webhooks_router)
 
+# Static files from the React build (served at /static/*)
+_FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(_FRONTEND_DIST):
+    app.mount("/static", StaticFiles(directory=_FRONTEND_DIST, html=True), name="static")
+
 
 @app.get("/health", tags=["system"])
 async def health() -> dict:
@@ -64,3 +71,14 @@ async def health_models() -> dict:
     results = await router.health_check()
     all_ok = all(v["status"] == "ok" for v in results.values())
     return {"all_ok": all_ok, "models": results}
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend(full_path: str) -> FileResponse:
+    """SPA fallback — serve index.html for any non-API route."""
+    if full_path.startswith(("api/", "docs", "redoc", "openapi")):
+        raise HTTPException(status_code=404, detail="Not found")
+    index = os.path.join(_FRONTEND_DIST, "index.html")
+    if os.path.exists(index):
+        return FileResponse(index)
+    raise HTTPException(status_code=404, detail="Frontend not built")

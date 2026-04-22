@@ -45,6 +45,7 @@
 | 19 | User Authentication (JWT + Login) | DONE | Claude + Codex | PRE-FASE 4.0 foundation |
 | 20 | RBAC - Role-Based Access Control (FASE 4.1) | DONE | Claude + Codex | Roles: admin, developer, user |
 | 21 | Rate Limiting (FASE 4.2) | DONE | Claude + Codex | 100 req/min per user |
+| 22 | Audit Logging (FASE 4.3) | DONE | Claude + Codex | Fire-and-forget, user_actions table |
 
 ### Completado
 
@@ -267,10 +268,38 @@ PR required: True (si no es trivial)
   - Storage: in-memory dict (MVP, sin Redis)
   - Tests: `11` en `tests/test_rate_limiting.py` (`pytest`) -> TODOS PASANDO
   - Total tests proyecto: `43/43` (`12 auth + 20 RBAC + 11 rate limit`)
+- [x] **Task #22:** Audit Logging (FASE 4.3) -> Completada por Claude Code @ 2026-04-22 16:14
+  - Archivos creados:
+    - `app/middleware/audit_logger.py` (`AuditLoggerMiddleware`, `sanitize_body`, `write_audit_log`)
+    - `app/api/audit.py` (`GET /audit` para usuario actual, `GET /audit/all` para admin)
+    - `alembic/versions/003_add_user_actions_table.py` (tabla `user_actions` con 4 indices)
+    - `tests/test_audit_logging.py` (26 tests de audit logging)
+  - Archivos modificados:
+    - `app/models/schemas.py` (`UserAction` ORM + `UserActionResponse` con `response_body` y `metadata`)
+    - `app/dependencies/security.py` (`get_user_id_from_token` publico para middleware)
+    - `app/main.py` (`AuditLoggerMiddleware` + `audit_router` registrados)
+  - Middleware: `AuditLoggerMiddleware` intercepta todas las acciones autenticadas y escribe logs en fire-and-forget
+  - Endpoints:
+    - `GET /audit` -> logs del usuario actual (paginado con `skip` y `limit`)
+    - `GET /audit/all` -> logs de todos (solo admin, con filtro opcional `user_id`)
+  - Tabla: `user_actions` (`id`, `user_id`, `action`, `method`, `endpoint`, `status_code`, `ip_address`, `user_agent`, `request_body`, `response_body`, `duration_ms`, `metadata`, `created_at`)
+  - Indices: `created_at`, `user_id`, `method`, `status_code`
+  - Sanitizacion: passwords y tokens nunca se loguean completos (reemplazados con `"***"`)
+  - Response truncation: `response_body` limitado a `500` chars
+  - Usuarios sin token: bypass (no auditados)
+  - Endpoints excluidos: `/health`, `/health/models`, `/docs`, `/redoc`, `/openapi.json`, `/webhooks/*`
+  - Tests: `26` en `tests/test_audit_logging.py` (`pytest`) -> TODOS PASANDO
+  - Total tests proyecto: `69/69` (`12 auth + 20 RBAC + 11 rate limit + 26 audit`)
 
 ---
 
 ## ULTIMA ACTUALIZACION
+
+- **Fecha:** 2026-04-22 16:14
+- **Por:** Codex (GPT-4o)
+- **Cambios:** Completada FASE 4.3 Audit Logging. `AuditLoggerMiddleware` implementado en modo fire-and-forget, tabla `user_actions` con 4 indices, `GET /audit` para usuario actual y `GET /audit/all` solo admin, con sanitizacion de passwords/tokens y truncacion de `response_body` a `500` chars. `26` tests audit + `43` anteriores = `69/69` tests pasando.
+- **Archivos creados:** `app/middleware/audit_logger.py`, `app/api/audit.py`, `alembic/versions/003_add_user_actions_table.py`, `tests/test_audit_logging.py`
+- **Archivos modificados:** `app/models/schemas.py`, `app/main.py`, `app/dependencies/security.py`, `README.md`, `CONTEXT.md`
 
 - **Fecha:** 2026-04-22 15:15
 - **Por:** Codex (GPT-4o)

@@ -719,11 +719,91 @@ curl -X GET http://localhost:8001/auth/me \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+## Audit Logging
+
+ADP registra todas las acciones autenticadas de usuario para auditoria y compliance.
+
+### Que se loguea
+
+- Quien: `user_id`
+- Que: `action` descriptiva (`view_tasks`, `execute_task`, `login`, etc.)
+- Cuando: `created_at`
+- Donde: `endpoint` y `method`
+- Resultado: `status_code`
+- Cuanto tardo: `duration_ms`
+- Desde donde: `ip_address` y `user_agent`
+
+### Que NO se loguea
+
+- Passwords y tokens completos; se reemplazan por `"***"`
+- Endpoints de sistema: `/health`, `/health/models`, `/docs`, `/redoc`, `/openapi.json`
+- `/webhooks/*`
+- Requests sin token valido
+
+### Endpoints de auditoria
+
+**GET /audit** - Ver tu propio audit trail
+
+```bash
+curl -X GET http://localhost:8001/audit \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json"
+
+# Respuesta:
+[
+  {
+    "id": "uuid",
+    "action": "view_auth_me",
+    "method": "GET",
+    "endpoint": "/auth/me",
+    "status_code": 200,
+    "created_at": "2026-04-22T10:30:45Z"
+  }
+]
+```
+
+**GET /audit/all** - Ver audit trail de todos (solo admin)
+
+```bash
+curl -X GET "http://localhost:8001/audit/all?user_id=<uuid>&limit=50" \
+  -H "Authorization: Bearer <admin_token>"
+
+# Parametros:
+# - skip: offset (default: 0)
+# - limit: cuantos registros (default: 50, max: 100)
+# - user_id: filtrar por usuario especifico (opcional)
+```
+
+### Ejemplo completo
+
+```bash
+# 1. Loguear
+TOKEN=$(curl -X POST http://localhost:8001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}' \
+  | jq -r '.access_token')
+
+# 2. Hacer acciones
+curl -X POST http://localhost:8001/api/tasks/11111111-1111-1111-1111-111111111111/execute \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. Ver tus logs
+curl -X GET http://localhost:8001/audit \
+  -H "Authorization: Bearer $TOKEN" \
+  | jq '.'
+
+# Si eres admin:
+ADMIN_TOKEN=...
+curl -X GET http://localhost:8001/audit/all \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  | jq '.'
+```
+
 ## Testing
 
 - Backend: `pytest tests/ --cov=app --cov-report=html`
 - Frontend: `npm test -- --coverage`
-- Baseline actual comunicado para auth + RBAC + rate limiting: `43/43` tests backend
+- Baseline actual comunicado para auth + RBAC + rate limiting + audit logging: `69/69` tests backend
 
 ### E2E SmartRouter con ticket real
 

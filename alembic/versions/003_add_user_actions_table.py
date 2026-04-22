@@ -34,9 +34,10 @@ def upgrade() -> None:
         sa.Column("ip_address", sa.String(45), nullable=True),
         sa.Column("user_agent", sa.Text, nullable=True),
         sa.Column("request_body", postgresql.JSONB, nullable=True),
+        sa.Column("response_body", sa.Text, nullable=True),
         sa.Column("duration_ms", sa.Integer, nullable=True),
         sa.Column("error_message", sa.Text, nullable=True),
-        sa.Column("extra_metadata", postgresql.JSONB, nullable=True),
+        sa.Column("metadata", postgresql.JSONB, nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -46,7 +47,7 @@ def upgrade() -> None:
     )
 
     op.create_index("ix_user_actions_user_id", "user_actions", ["user_id"])
-    op.create_index("ix_user_actions_action", "user_actions", ["action"])
+    op.create_index("ix_user_actions_method", "user_actions", ["method"])
     op.create_index("ix_user_actions_status_code", "user_actions", ["status_code"])
     op.create_index("ix_user_actions_created_at", "user_actions", ["created_at"])
 
@@ -54,6 +55,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_user_actions_created_at", table_name="user_actions")
     op.drop_index("ix_user_actions_status_code", table_name="user_actions")
-    op.drop_index("ix_user_actions_action", table_name="user_actions")
+    op.drop_index("ix_user_actions_method", table_name="user_actions")
     op.drop_index("ix_user_actions_user_id", table_name="user_actions")
     op.drop_table("user_actions")

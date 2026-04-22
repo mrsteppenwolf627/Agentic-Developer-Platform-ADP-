@@ -423,16 +423,17 @@ class UserAction(Base):
         nullable=False,
         index=True,
     )
-    action: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    method: Mapped[str] = mapped_column(String(10), nullable=False)
+    action: Mapped[str] = mapped_column(String(255), nullable=False)
+    method: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
     endpoint: Mapped[str] = mapped_column(String(500), nullable=False)
     status_code: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
     user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     request_body: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    response_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    extra_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    metadata_: Mapped[Optional[Dict[str, Any]]] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=sa.text("NOW()"),
@@ -707,7 +708,7 @@ class UserInDB(UserResponse):
 # ---------------------------------------------------------------------------
 
 class UserActionResponse(BaseModel):
-    model_config = _ORM_CONFIG
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: uuid.UUID
     user_id: uuid.UUID
@@ -718,7 +719,8 @@ class UserActionResponse(BaseModel):
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
     request_body: Optional[Dict[str, Any]] = None
+    response_body: Optional[str] = None
     duration_ms: Optional[int] = None
     error_message: Optional[str] = None
-    extra_metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = Field(default=None, alias="metadata_")
     created_at: datetime

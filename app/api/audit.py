@@ -21,31 +21,35 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 
 @router.get("", response_model=List[UserActionResponse])
 async def get_my_audit_log(
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    offset: Optional[int] = Query(None, ge=0, include_in_schema=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[UserActionResponse]:
+    effective_skip = offset if offset is not None else skip
     result = await db.execute(
         select(UserAction)
         .where(UserAction.user_id == current_user.id)
         .order_by(UserAction.created_at.desc())
         .limit(limit)
-        .offset(offset)
+        .offset(effective_skip)
     )
     return result.scalars().all()
 
 
 @router.get("/all", response_model=List[UserActionResponse])
 async def get_all_audit_log(
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    offset: Optional[int] = Query(None, ge=0, include_in_schema=False),
     user_id: Optional[uuid.UUID] = Query(None),
     current_user: User = Depends(require_role([UserRole.admin])),
     db: AsyncSession = Depends(get_db),
 ) -> List[UserActionResponse]:
+    effective_skip = offset if offset is not None else skip
     query = select(UserAction).order_by(UserAction.created_at.desc())
     if user_id is not None:
         query = query.where(UserAction.user_id == user_id)
-    result = await db.execute(query.limit(limit).offset(offset))
+    result = await db.execute(query.limit(limit).offset(effective_skip))
     return result.scalars().all()

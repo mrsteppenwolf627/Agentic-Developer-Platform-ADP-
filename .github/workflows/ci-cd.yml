@@ -3,6 +3,7 @@ name: Tests & Deploy
 on:
   push:
     branches:
+      - master
       - main
 
 jobs:
@@ -57,11 +58,10 @@ jobs:
 
   deploy:
     needs: [backend-tests, frontend-tests]
-    if: success() && github.ref == 'refs/heads/main'
+    if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     steps:
       - name: Deployment guide
         run: |
           echo "Deploy stage ready."
           echo "Follow DEPLOYMENT.md to configure Vercel and Railway/Render."
-

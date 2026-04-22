@@ -93,6 +93,17 @@ class Settings(BaseSettings):
     rpm_codex: int = Field(default=60)
 
     # ------------------------------------------------------------------
+    # JWT Authentication (PRE-4.0)
+    # ------------------------------------------------------------------
+    jwt_secret: str = Field(
+        default="dev-secret-change-in-production",
+        alias="JWT_SECRET",
+        description="HS256 signing secret. Must be overridden in production via env var.",
+    )
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_expiration_minutes: int = Field(default=15)
+
+    # ------------------------------------------------------------------
     # Application
     # ------------------------------------------------------------------
     app_env: str = Field(default="development")

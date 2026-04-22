@@ -99,6 +99,12 @@ class SessionStatus(str, enum.Enum):
     timeout = "timeout"
 
 
+class UserRole(str, enum.Enum):
+    admin = "admin"
+    developer = "developer"
+    user = "user"
+
+
 # ===========================================================================
 # 2. SQLAlchemy Base
 # ===========================================================================
@@ -369,6 +375,40 @@ class AgentSession(Base):
     task: Mapped["Task"] = relationship("Task", back_populates="agent_sessions")
 
 
+class User(Base):
+    """Authenticated user. Role is immutable after creation (FASE 4.1 RBAC)."""
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
+    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        _sa_enum(UserRole, "user_role"),
+        nullable=False,
+        server_default="user",
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=sa.text("true"),
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=sa.text("NOW()"),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=sa.text("NOW()"),
+        nullable=False,
+    )
+
+
 # ===========================================================================
 # 4. Pydantic Schemas
 # ===========================================================================
@@ -591,3 +631,40 @@ class AgentSessionResponse(AgentSessionBase):
 
     id: uuid.UUID
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# User schemas
+# ---------------------------------------------------------------------------
+
+class UserCreate(BaseModel):
+    email: str = Field(..., min_length=1, max_length=255)
+    password: str = Field(..., min_length=8, max_length=255)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        import re
+        if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", v):
+            raise ValueError("Invalid email format")
+        return v.lower()
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    model_config = _ORM_CONFIG
+
+    id: uuid.UUID
+    email: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserInDB(UserResponse):
+    password_hash: str

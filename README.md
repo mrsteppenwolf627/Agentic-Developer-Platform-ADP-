@@ -651,11 +651,79 @@ curl -X POST http://localhost:8001/auth/admin/users \
 # Respuesta: 201 Created + usuario con role=developer
 ```
 
+## Rate Limiting
+
+ADP implementa rate limiting para proteger la API contra abuso.
+
+### Limites
+
+- `100 requests/minuto` por usuario autenticado
+- Configurable via variable de entorno: `RATE_LIMIT_PER_MINUTE`
+
+### Endpoints excluidos
+
+Los siguientes endpoints NO cuentan hacia el limite:
+
+- `/health` -> health check
+- `/health/models` -> model health check
+- `/docs` -> Swagger UI
+- `/redoc` -> ReDoc
+- `/openapi.json` -> OpenAPI schema
+- `/webhooks/*` -> webhooks de terceros
+
+### Comportamiento
+
+- Autenticado, `< 100 req/min`: request procesado normalmente
+
+```http
+HTTP 200
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 75
+X-RateLimit-Reset: <timestamp>
+```
+
+- Autenticado, `> 100 req/min`: request rechazado
+
+```http
+HTTP 429 Too Many Requests
+Retry-After: 45
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: <timestamp>
+```
+
+```json
+{
+  "detail": "Rate limit exceeded. Retry after 45 seconds"
+}
+```
+
+- Sin token: no se aplica rate limiting; el endpoint devuelve `401` si requiere autenticacion
+
+### Ejemplo
+
+```bash
+# Loguear
+TOKEN=$(curl -X POST http://localhost:8001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}' \
+  | jq -r '.access_token')
+
+# Requests 1-100: OK
+for i in {1..100}; do
+  curl -X GET http://localhost:8001/auth/me \
+    -H "Authorization: Bearer $TOKEN"
+done
+
+# Request 101: 429 Too Many Requests
+curl -X GET http://localhost:8001/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ## Testing
 
 - Backend: `pytest tests/ --cov=app --cov-report=html`
 - Frontend: `npm test -- --coverage`
-- Baseline actual comunicado: 21 tests, 74% coverage backend
+- Baseline actual comunicado para auth + RBAC + rate limiting: `43/43` tests backend
 
 ### E2E SmartRouter con ticket real
 

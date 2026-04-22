@@ -44,6 +44,7 @@
 | 18 | Webhook API Routes + E2E local | DONE | Codex | `/webhooks/slack`, `/webhooks/jira`, `/webhooks/github` + `tests/test_webhooks_e2e.py` |
 | 19 | User Authentication (JWT + Login) | DONE | Claude + Codex | PRE-FASE 4.0 foundation |
 | 20 | RBAC - Role-Based Access Control (FASE 4.1) | DONE | Claude + Codex | Roles: admin, developer, user |
+| 21 | Rate Limiting (FASE 4.2) | DONE | Claude + Codex | 100 req/min per user |
 
 ### Completado
 
@@ -244,10 +245,38 @@ PR required: True (si no es trivial)
     - `200 OK`: acceso permitido
   - Tests: `20` tests en `tests/test_rbac.py` (`pytest`) -> TODOS PASANDO
   - Security validations: role-based authorization, correct HTTP status codes, error messages claros
+- [x] **Task #21:** Rate Limiting (FASE 4.2) -> Completada por Claude Code @ 2026-04-22 15:15
+  - Archivos creados:
+    - `app/middleware/__init__.py`
+    - `app/middleware/rate_limiter.py` (`RateLimitStore`, `RateLimitEntry`, `RateLimitMiddleware`)
+    - `tests/test_rate_limiting.py` (11 tests de rate limiting)
+  - Archivos modificados:
+    - `app/config.py` (`RATE_LIMIT_PER_MINUTE = 100`, configurable via env var)
+    - `app/main.py` (`RateLimitMiddleware` registrado entre CORS y routers)
+  - Middleware: `RateLimitMiddleware` intercepta requests autenticados
+  - Limite: `100 requests/minuto` por usuario (configurable)
+  - HTTP status code:
+    - `429 Too Many Requests` si excede limite
+    - Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After`
+  - Endpoints excluidos de rate limiting:
+    - `/health`, `/health/models`
+    - `/docs`, `/redoc`, `/openapi.json`
+    - `/webhooks/*`
+  - Usuarios sin token: bypass (no contabilizados)
+  - Ventana deslizante: `60 segundos`
+  - Storage: in-memory dict (MVP, sin Redis)
+  - Tests: `11` en `tests/test_rate_limiting.py` (`pytest`) -> TODOS PASANDO
+  - Total tests proyecto: `43/43` (`12 auth + 20 RBAC + 11 rate limit`)
 
 ---
 
 ## ULTIMA ACTUALIZACION
+
+- **Fecha:** 2026-04-22 15:15
+- **Por:** Codex (GPT-4o)
+- **Cambios:** Completada FASE 4.2 Rate Limiting. `RateLimitMiddleware` implementado con ventana deslizante, `100 req/min` por usuario autenticado, status `429` si excede, headers `X-RateLimit-*` presentes, endpoints excluidos (`/health`, `/docs`, `/webhooks/*`), storage in-memory y bypass para requests sin token o token invalido. `11` tests rate limiting + `32` anteriores = `43/43` tests pasando.
+- **Archivos creados:** `app/middleware/rate_limiter.py`, `tests/test_rate_limiting.py`
+- **Archivos modificados:** `app/config.py`, `app/main.py`, `README.md`, `CONTEXT.md`
 
 - **Fecha:** 2026-04-22 13:47
 - **Por:** Codex (GPT-4o)

@@ -152,6 +152,13 @@ class Settings(BaseSettings):
     def normalize_jwt_secret(cls, value: str) -> str:
         return value.strip()
 
+    @field_validator("rate_limit_per_minute")
+    @classmethod
+    def validate_rate_limit_per_minute(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("RATE_LIMIT_PER_MINUTE must be >= 0")
+        return value
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"

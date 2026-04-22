@@ -1,37 +1,22 @@
-"""Rate limiting tests — FASE 4.2.
-
-Strategy:
-  - Pre-set store counters directly instead of making 100 real HTTP calls
-    so the suite runs in < 1 second.
-  - Only a few tests make multiple real requests (≤ 5) to verify the counter
-    increments correctly end-to-end.
-
-Coverage:
-  - Authenticated requests consume the counter.
-  - /health, /webhooks/* and unauthenticated requests are NOT counted.
-  - HTTP 429 with correct headers is returned when the limit is reached.
-  - Different users have independent counters.
-  - Counter resets after the window expires.
-  - X-RateLimit-* headers appear on normal responses.
-"""
+"""Rate limiting tests â€” FASE 4.2."""
 from __future__ import annotations
 
+import concurrent.futures
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.dependencies.security import create_access_token, hash_password
-from app.middleware.rate_limiter import RateLimitEntry, RateLimitStore
+from app.main import app, rate_limit_store
+from app.middleware.rate_limiter import RateLimitMiddleware, RateLimitStore
 from app.models.schemas import User, UserRole
 from tests.conftest import ScalarResult
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _make_user(role: UserRole = UserRole.user, email: str | None = None) -> User:
     now = datetime.now(timezone.utc)
@@ -51,187 +36,175 @@ def _headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _at_limit(store: RateLimitStore, user: User, limit: int = 100) -> None:
-    """Pre-fill the store so the next request is the (limit+1)th."""
-    entry = store.get_or_create(str(user.id))
-    entry.count = limit
-    entry.reset_at = datetime.now(timezone.utc) + timedelta(minutes=1)
+def _prefill_user_limit(store: RateLimitStore, user: User, count: int) -> None:
+    for _ in range(count):
+        store.consume(str(user.id), limit=100)
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def auth_env(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", "test-secret-key-with-32-plus-bytes")
+    monkeypatch.setenv("JWT_ALGORITHM", "HS256")
+    monkeypatch.setenv("JWT_EXPIRATION_MINUTES", "15")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
 
 @pytest.fixture(autouse=True)
 def reset_store():
-    """Isolate each test — clear the shared in-memory store."""
-    from app.main import rate_limit_store
     rate_limit_store.clear()
     yield
     rate_limit_store.clear()
 
 
-# ---------------------------------------------------------------------------
-# /health and /webhooks/* — excluded from rate limiting
-# ---------------------------------------------------------------------------
-
-def test_health_endpoint_not_rate_limited(client):
-    for _ in range(5):
-        r = client.get("/health")
-        assert r.status_code == 200
-        assert "X-RateLimit-Limit" not in r.headers
-
-
-def test_webhooks_not_rate_limited(client):
-    from app.main import rate_limit_store
-    user = _make_user()
-    _at_limit(rate_limit_store, user)
-
-    # Even though this user is at the limit, /webhooks/* is excluded
-    for _ in range(3):
-        r = client.post("/webhooks/slack", json={})
-        assert r.status_code != 429
-
-
-# ---------------------------------------------------------------------------
-# Unauthenticated requests — not counted
-# ---------------------------------------------------------------------------
-
-def test_unauthenticated_requests_not_rate_limited(client):
-    """No token → rate limiter bypasses → endpoint returns 401, never 429."""
-    for _ in range(5):
-        r = client.get("/auth/me")
-        assert r.status_code == 401
-        assert "X-RateLimit-Limit" not in r.headers
-
-
-def test_invalid_token_requests_not_rate_limited(client):
-    """Malformed token can't be decoded → rate limiter treats as anonymous."""
-    bad_headers = {"Authorization": "Bearer not-a-real-jwt"}
-    for _ in range(5):
-        r = client.get("/auth/me", headers=bad_headers)
-        assert r.status_code == 401
-        assert "X-RateLimit-Limit" not in r.headers
-
-
-# ---------------------------------------------------------------------------
-# Authenticated requests — rate limit headers present
-# ---------------------------------------------------------------------------
-
-def test_authenticated_request_has_rate_limit_headers(client, mock_db):
+def test_user_can_make_100_requests(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
+    _prefill_user_limit(rate_limit_store, user, 99)
 
-    r = client.get("/auth/me", headers=_headers(user))
+    response = client.get("/auth/me", headers=_headers(user))
 
-    assert r.status_code == 200
-    assert r.headers.get("X-RateLimit-Limit") == "100"
-    assert r.headers.get("X-RateLimit-Remaining") == "99"
-    assert "X-RateLimit-Reset" in r.headers
+    assert response.status_code == 200
+    assert response.headers["X-RateLimit-Limit"] == "100"
+    assert response.headers["X-RateLimit-Remaining"] == "0"
 
 
-def test_rate_limit_remaining_decrements(client, mock_db):
+def test_user_gets_429_on_101st_request(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
-    h = _headers(user)
+    _prefill_user_limit(rate_limit_store, user, 100)
 
-    r1 = client.get("/auth/me", headers=h)
-    r2 = client.get("/auth/me", headers=h)
-    r3 = client.get("/auth/me", headers=h)
+    response = client.get("/auth/me", headers=_headers(user))
 
-    assert int(r1.headers["X-RateLimit-Remaining"]) == 99
-    assert int(r2.headers["X-RateLimit-Remaining"]) == 98
-    assert int(r3.headers["X-RateLimit-Remaining"]) == 97
-
-
-# ---------------------------------------------------------------------------
-# HTTP 429 — triggered when limit is reached
-# ---------------------------------------------------------------------------
-
-def test_user_gets_429_when_limit_exceeded(client, mock_db):
-    from app.main import rate_limit_store
-    user = _make_user()
-    mock_db.execute.return_value = ScalarResult(user)
-    _at_limit(rate_limit_store, user)
-
-    r = client.get("/auth/me", headers=_headers(user))
-
-    assert r.status_code == 429
-    assert "Rate limit exceeded" in r.json()["detail"]
+    assert response.status_code == 429
 
 
 def test_429_response_has_correct_headers(client, mock_db):
-    from app.main import rate_limit_store
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
-    _at_limit(rate_limit_store, user)
+    _prefill_user_limit(rate_limit_store, user, 100)
 
-    r = client.get("/auth/me", headers=_headers(user))
+    response = client.get("/auth/me", headers=_headers(user))
 
-    assert r.status_code == 429
-    assert r.headers.get("X-RateLimit-Limit") == "100"
-    assert r.headers.get("X-RateLimit-Remaining") == "0"
-    assert "Retry-After" in r.headers
-    assert "X-RateLimit-Reset" in r.headers
-    retry_after = int(r.headers["Retry-After"])
-    assert 0 <= retry_after <= 60
+    assert response.status_code == 429
+    assert response.headers["X-RateLimit-Limit"] == "100"
+    assert response.headers["X-RateLimit-Remaining"] == "0"
+    assert response.headers["Retry-After"].isdigit()
+    assert response.headers["X-RateLimit-Reset"].isdigit()
 
-
-def test_429_response_body_has_detail(client, mock_db):
-    from app.main import rate_limit_store
-    user = _make_user()
-    _at_limit(rate_limit_store, user)
-
-    r = client.get("/auth/me", headers=_headers(user))
-
-    assert r.status_code == 429
-    body = r.json()
-    assert "detail" in body
-
-
-# ---------------------------------------------------------------------------
-# Different users have independent counters
-# ---------------------------------------------------------------------------
 
 def test_different_users_have_separate_limits(client, mock_db):
-    from app.main import rate_limit_store
     user_a = _make_user(email="a@example.com")
     user_b = _make_user(email="b@example.com")
+    _prefill_user_limit(rate_limit_store, user_a, 100)
 
-    # Fill user_a to the limit
-    _at_limit(rate_limit_store, user_a)
-
-    # user_a should get 429
     mock_db.execute.return_value = ScalarResult(user_a)
-    r_a = client.get("/auth/me", headers=_headers(user_a))
-    assert r_a.status_code == 429
+    response_a = client.get("/auth/me", headers=_headers(user_a))
 
-    # user_b still has full quota
     mock_db.execute.return_value = ScalarResult(user_b)
-    r_b = client.get("/auth/me", headers=_headers(user_b))
-    assert r_b.status_code == 200
-    assert int(r_b.headers["X-RateLimit-Remaining"]) == 99
+    response_b = client.get("/auth/me", headers=_headers(user_b))
+
+    assert response_a.status_code == 429
+    assert response_b.status_code == 200
+    assert response_b.headers["X-RateLimit-Remaining"] == "99"
 
 
-# ---------------------------------------------------------------------------
-# Window reset
-# ---------------------------------------------------------------------------
+def test_health_endpoint_not_rate_limited(client):
+    for _ in range(3):
+        response = client.get("/health")
+        assert response.status_code == 200
+        assert "X-RateLimit-Limit" not in response.headers
 
-def test_rate_limit_resets_after_window_expires(client, mock_db):
-    from app.main import rate_limit_store
+
+def test_webhooks_not_rate_limited(client):
+    user = _make_user()
+    _prefill_user_limit(rate_limit_store, user, 100)
+
+    for _ in range(3):
+        response = client.post("/webhooks/slack", json={})
+        assert response.status_code != 429
+        assert "X-RateLimit-Limit" not in response.headers
+
+
+def test_unauthenticated_requests_not_limited(client):
+    for _ in range(3):
+        missing = client.get("/auth/me")
+        invalid = client.get("/auth/me", headers={"Authorization": "Bearer invalid-token"})
+
+        assert missing.status_code == 401
+        assert invalid.status_code == 401
+        assert "X-RateLimit-Limit" not in missing.headers
+        assert "X-RateLimit-Limit" not in invalid.headers
+
+
+def test_429_response_body_is_valid_json(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
-    h = _headers(user)
+    _prefill_user_limit(rate_limit_store, user, 100)
 
-    # Fill to limit
-    _at_limit(rate_limit_store, user)
-    assert client.get("/auth/me", headers=h).status_code == 429
+    response = client.get("/auth/me", headers=_headers(user))
 
-    # Simulate window expiry without sleeping
-    entry = rate_limit_store.data[str(user.id)]
-    entry.reset_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+    assert response.status_code == 429
+    assert response.json() == {
+        "detail": f"Rate limit exceeded. Retry after {response.headers['Retry-After']} seconds"
+    }
 
-    # Next request should succeed and reset the counter
-    r = client.get("/auth/me", headers=h)
-    assert r.status_code == 200
-    assert int(r.headers["X-RateLimit-Remaining"]) == 99
+
+def test_rate_limit_header_format_correct(client, mock_db, monkeypatch):
+    local_app = FastAPI()
+    local_store = RateLimitStore()
+
+    @local_app.get("/limited")
+    async def limited():
+        return JSONResponse({"ok": True})
+
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "3")
+    get_settings.cache_clear()
+    local_app.add_middleware(
+        RateLimitMiddleware,
+        rate_limit_store=local_store,
+        limit=get_settings().rate_limit_per_minute,
+    )
+
+    user = _make_user()
+    with TestClient(local_app) as local_client:
+        response = local_client.get("/limited", headers=_headers(user))
+
+    assert response.status_code == 200
+    assert response.headers["X-RateLimit-Limit"] == "3"
+    assert response.headers["X-RateLimit-Remaining"] == "2"
+    assert response.headers["X-RateLimit-Reset"].isdigit()
+    assert int(response.headers["X-RateLimit-Reset"]) >= int(datetime.now(timezone.utc).timestamp())
+
+
+def test_concurrent_requests_from_same_user():
+    store = RateLimitStore()
+    user_id = str(uuid.uuid4())
+    base_time = datetime.now(timezone.utc)
+
+    def consume_once():
+        return store.consume(user_id, limit=3, now=base_time).allowed
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        results = list(executor.map(lambda _: consume_once(), range(5)))
+
+    assert sum(results) == 3
+    assert store.data[user_id].count == 3
+
+
+def test_rate_limit_accurate_to_second():
+    store = RateLimitStore()
+    user_id = str(uuid.uuid4())
+    start = datetime(2026, 4, 22, 12, 0, 0, tzinfo=timezone.utc)
+
+    first = store.consume(user_id, limit=1, now=start)
+    blocked = store.consume(user_id, limit=1, now=start + timedelta(seconds=59))
+    allowed_again = store.consume(user_id, limit=1, now=start + timedelta(seconds=60))
+
+    assert first.allowed is True
+    assert first.remaining == 0
+    assert blocked.allowed is False
+    assert blocked.retry_after == 1
+    assert int(blocked.reset_at.timestamp()) == int((start + timedelta(seconds=60)).timestamp())
+    assert allowed_again.allowed is True

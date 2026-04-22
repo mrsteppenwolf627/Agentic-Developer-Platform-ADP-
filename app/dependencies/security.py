@@ -16,11 +16,18 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.schemas import User
 
-_bearer = HTTPBearer(auto_error=True)
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _get_auth_settings() -> Settings:
+    settings = get_settings()
+    if not settings.jwt_secret:
+        raise RuntimeError("JWT_SECRET must be set in the environment")
+    return settings
 
 
 def hash_password(password: str) -> str:
@@ -32,7 +39,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def create_access_token(user_id: uuid.UUID, email: str, expires_delta: Optional[timedelta] = None) -> str:
-    settings = get_settings()
+    settings = _get_auth_settings()
     delta = expires_delta or timedelta(minutes=settings.jwt_expiration_minutes)
     now = datetime.now(tz=timezone.utc)
     payload = {
@@ -48,12 +55,14 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    settings = get_settings()
+    settings = _get_auth_settings()
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired token",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if credentials is None or not credentials.credentials:
+        raise credentials_exception
     try:
         payload = jwt.decode(
             credentials.credentials,
@@ -63,16 +72,17 @@ async def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
+        user_uuid = uuid.UUID(user_id)
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.PyJWTError:
+    except (TypeError, ValueError, jwt.PyJWTError):
         raise credentials_exception
 
-    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    result = await db.execute(select(User).where(User.id == user_uuid))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise credentials_exception

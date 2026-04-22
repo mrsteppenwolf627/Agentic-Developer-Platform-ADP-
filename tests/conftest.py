@@ -12,7 +12,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.litellm_router import ModelRouter, RouteResult
+from app.config import get_settings
 from app.database import get_db
+from app.dependencies.security import create_access_token
 from app.main import app
 from app.models.schemas import (
     Adr,
@@ -27,6 +29,8 @@ from app.models.schemas import (
     Ticket,
     TicketPriority,
     TicketStatus,
+    User,
+    UserRole,
 )
 from app.services.context_manager import ContextManager, ContextState
 
@@ -183,6 +187,36 @@ def sample_adr():
         created_at=now,
         updated_at=now,
     )
+
+
+@pytest.fixture(autouse=True)
+def auth_env(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", "test-secret-key-with-32-plus-bytes")
+    monkeypatch.setenv("JWT_ALGORITHM", "HS256")
+    monkeypatch.setenv("JWT_EXPIRATION_MINUTES", "15")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture
+def auth_user():
+    now = datetime.now(timezone.utc)
+    return User(
+        id=uuid.uuid4(),
+        email="auth@example.com",
+        password_hash="hashed-value",
+        role=UserRole.user,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+@pytest.fixture
+def auth_headers(auth_user):
+    token = create_access_token(auth_user.id, auth_user.email)
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

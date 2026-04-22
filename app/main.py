@@ -12,9 +12,11 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.auth import router as auth_router
@@ -38,6 +40,17 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_request_validation_error(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    status_code = 400 if request.url.path.startswith("/auth/") else 422
+    return JSONResponse(
+        status_code=status_code,
+        content={"detail": jsonable_encoder(exc.errors())},
+    )
 
 # CORS — tighten origins in production
 app.add_middleware(

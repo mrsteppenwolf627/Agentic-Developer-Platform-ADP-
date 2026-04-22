@@ -96,9 +96,9 @@ class Settings(BaseSettings):
     # JWT Authentication (PRE-4.0)
     # ------------------------------------------------------------------
     jwt_secret: str = Field(
-        default="dev-secret-change-in-production",
+        default="",
         alias="JWT_SECRET",
-        description="HS256 signing secret. Must be overridden in production via env var.",
+        description="HS256 signing secret. Must be provided via environment variable.",
     )
     jwt_algorithm: str = Field(default="HS256")
     jwt_expiration_minutes: int = Field(default=15)
@@ -137,6 +137,11 @@ class Settings(BaseSettings):
         if v not in allowed:
             raise ValueError(f"app_env must be one of {allowed}")
         return v
+
+    @field_validator("jwt_secret")
+    @classmethod
+    def normalize_jwt_secret(cls, value: str) -> str:
+        return value.strip()
 
     @property
     def is_production(self) -> bool:

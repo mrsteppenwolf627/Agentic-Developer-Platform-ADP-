@@ -12,6 +12,7 @@ from app.models.schemas import (
     Adr,
     AgentSession,
     User,
+    UserAction,
 )
 
 # Python Enums
@@ -83,11 +84,14 @@ from app.models.schemas import (
     UserInDB,
 )
 
+# Pydantic Schemas — UserAction
+from app.models.schemas import UserActionResponse
+
 __all__ = [
     # Base
     "Base",
     # ORM Models
-    "Ticket", "Task", "Evaluation", "RollbackStack", "Adr", "AgentSession", "User",
+    "Ticket", "Task", "Evaluation", "RollbackStack", "Adr", "AgentSession", "User", "UserAction",
     # Enums
     "TicketStatus", "TicketPriority", "AgentModel", "TaskStatus",
     "EvaluationType", "EvaluationModel", "RollbackState", "AdrStatus", "SessionStatus",
@@ -106,4 +110,6 @@ __all__ = [
     "AgentSessionBase", "AgentSessionCreate", "AgentSessionUpdate", "AgentSessionResponse",
     # Pydantic — User
     "UserCreate", "UserLogin", "UserResponse", "UserInDB",
+    # Pydantic — UserAction
+    "UserActionResponse",
 ]

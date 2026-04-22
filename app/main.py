@@ -19,11 +19,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.audit import router as audit_router
 from app.api.auth import router as auth_router
 from app.api.evaluations import router as evaluations_router
 from app.api.tasks import router as tasks_router
 from app.api.webhooks import router as webhooks_router
 from app.config import get_settings
+from app.middleware.audit_logger import AuditLoggerMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, RateLimitStore
 
 logging.basicConfig(
@@ -70,11 +72,15 @@ app.add_middleware(
     limit=settings.rate_limit_per_minute,
 )
 
+# Audit logging — fire-and-forget per authenticated request
+app.add_middleware(AuditLoggerMiddleware)
+
 # Routers
 app.include_router(auth_router)
 app.include_router(tasks_router)
 app.include_router(evaluations_router)
 app.include_router(webhooks_router)
+app.include_router(audit_router)
 
 # Static files from the React build
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")

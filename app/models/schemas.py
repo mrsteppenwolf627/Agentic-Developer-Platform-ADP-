@@ -409,6 +409,38 @@ class User(Base):
     )
 
 
+class UserAction(Base):
+    """API audit trail — one row per authenticated request (FASE 4.3)."""
+    __tablename__ = "user_actions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    method: Mapped[str] = mapped_column(String(10), nullable=False)
+    endpoint: Mapped[str] = mapped_column(String(500), nullable=False)
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    request_body: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    duration_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extra_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=sa.text("NOW()"),
+        nullable=False,
+        index=True,
+    )
+
+
 # ===========================================================================
 # 4. Pydantic Schemas
 # ===========================================================================
@@ -668,3 +700,25 @@ class UserResponse(BaseModel):
 
 class UserInDB(UserResponse):
     password_hash: str
+
+
+# ---------------------------------------------------------------------------
+# UserAction schemas
+# ---------------------------------------------------------------------------
+
+class UserActionResponse(BaseModel):
+    model_config = _ORM_CONFIG
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    action: str
+    method: str
+    endpoint: str
+    status_code: int
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    request_body: Optional[Dict[str, Any]] = None
+    duration_ms: Optional[int] = None
+    error_message: Optional[str] = None
+    extra_metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime

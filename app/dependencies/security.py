@@ -89,6 +89,19 @@ async def get_current_user(
     return user
 
 
+def get_user_id_from_token(auth_header: Optional[str]) -> Optional[str]:
+    """Extract user_id (sub claim) from a Bearer Authorization header."""
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header[7:]
+    try:
+        settings = _get_auth_settings()
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        return payload.get("sub")
+    except (TypeError, ValueError, RuntimeError, jwt.PyJWTError):
+        return None
+
+
 def require_role(allowed_roles: List[UserRole]):
     """Return a FastAPI dependency that enforces role-based access.
 

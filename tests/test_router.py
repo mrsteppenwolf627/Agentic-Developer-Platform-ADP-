@@ -38,7 +38,7 @@ async def test_route_task_fallback_chain_claude_openai_gemini():
 
     assert result.content == "final code"
     assert result.attempt == 3
-    assert result.model_used == "gemini/gemini-2.0-flash"
+    assert result.model_used == router._settings.gemini_model
     assert router._log_failed_session.await_count == 2
 
 
@@ -86,4 +86,3 @@ async def test_route_task_auth_error_does_not_fallback():
     assert exc_info.value.details.error_type == "auth"
     assert completion_mock.await_count == 1
     router._log_failed_session.assert_awaited_once()
-

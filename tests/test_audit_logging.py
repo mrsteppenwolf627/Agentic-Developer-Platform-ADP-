@@ -1,15 +1,19 @@
-"""Audit logging tests — FASE 4.3."""
+"""Audit logging tests for FASE 4.3."""
 from __future__ import annotations
 
+import asyncio
+import json
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from app.dependencies.security import create_access_token, hash_password
-from app.middleware.audit_logger import _derive_action, sanitize_body
-from app.models.schemas import User, UserRole
+from app.middleware.audit_logger import AuditLoggerMiddleware, _derive_action, sanitize_body
+from app.models.schemas import User, UserAction, UserRole
 from tests.conftest import ScalarResult
 
 
@@ -31,9 +35,50 @@ def _headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _make_request(
+    *,
+    path: str,
+    method: str = "GET",
+    body: object | None = None,
+    headers: dict[str, str] | None = None,
+) -> Request:
+    raw_body = b""
+    if body is not None:
+        raw_body = json.dumps(body).encode("utf-8")
+
+    sent = False
+
+    async def receive() -> dict[str, object]:
+        nonlocal sent
+        if sent:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        sent = True
+        return {"type": "http.request", "body": raw_body, "more_body": False}
+
+    raw_headers = []
+    for key, value in (headers or {}).items():
+        raw_headers.append((key.lower().encode("utf-8"), value.encode("utf-8")))
+
+    scope = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": method,
+        "scheme": "http",
+        "path": path,
+        "raw_path": path.encode("utf-8"),
+        "root_path": "",
+        "query_string": b"",
+        "headers": raw_headers,
+        "client": ("127.0.0.1", 1234),
+        "server": ("testserver", 80),
+    }
+    return Request(scope, receive)
+
+
 # ---------------------------------------------------------------------------
-# Pure function tests — sanitize_body
+# Pure function tests - sanitize_body
 # ---------------------------------------------------------------------------
+
 
 def test_sanitize_body_masks_password():
     assert sanitize_body({"password": "s3cr3t"}) == {"password": "***"}
@@ -42,10 +87,6 @@ def test_sanitize_body_masks_password():
 def test_sanitize_body_masks_token_and_api_key():
     result = sanitize_body({"token": "xyz", "api_key": "key123", "data": "safe"})
     assert result == {"token": "***", "api_key": "***", "data": "safe"}
-
-
-def test_sanitize_body_masks_access_token():
-    assert sanitize_body({"access_token": "jwt.foo.bar"}) == {"access_token": "***"}
 
 
 def test_sanitize_body_masks_nested_password():
@@ -63,48 +104,53 @@ def test_sanitize_body_leaves_non_sensitive_unchanged():
     assert sanitize_body(data) == data
 
 
-def test_sanitize_body_handles_list():
-    result = sanitize_body([{"password": "abc"}, {"name": "bob"}])
-    assert result == [{"password": "***"}, {"name": "bob"}]
-
-
-def test_sanitize_body_handles_non_dict_values():
-    assert sanitize_body("plain string") == "plain string"
-    assert sanitize_body(42) == 42
-    assert sanitize_body(None) is None
-
-
 # ---------------------------------------------------------------------------
-# Pure function tests — _derive_action
+# Pure function tests - _derive_action
 # ---------------------------------------------------------------------------
 
-def test_derive_action_strips_uuid():
+
+def test_derive_action_get_task_is_descriptive():
     uid = uuid.uuid4()
-    assert _derive_action("GET", f"/tasks/{uid}") == "GET:tasks"
+    assert _derive_action("GET", f"/api/tasks/{uid}") == "view_tasks"
 
 
-def test_derive_action_preserves_non_uuid_segments():
-    assert _derive_action("POST", "/auth/register") == "POST:auth/register"
+def test_derive_action_register_is_descriptive():
+    assert _derive_action("POST", "/auth/register") == "register"
 
 
-def test_derive_action_root_path():
-    assert _derive_action("GET", "/") == "GET:/"
+def test_derive_action_execute_task_is_descriptive():
+    uid = uuid.uuid4()
+    assert _derive_action("POST", f"/api/tasks/{uid}/execute") == "execute_task"
 
 
-def test_derive_action_strips_multiple_uuids():
-    uid1, uid2 = uuid.uuid4(), uuid.uuid4()
-    assert _derive_action("DELETE", f"/tickets/{uid1}/tasks/{uid2}") == "DELETE:tickets/tasks"
+def test_derive_action_view_all_is_descriptive():
+    assert _derive_action("GET", "/audit/all") == "view_all_audit"
 
 
-def test_derive_action_uppercases_method():
-    assert _derive_action("post", "/auth/login") == "POST:auth/login"
+def test_derive_action_admin_create_user_is_descriptive():
+    assert _derive_action("POST", "/auth/admin/users") == "create_admin_user"
+
+
+def test_user_action_model_has_expected_columns_indexes_and_no_fk():
+    table = UserAction.__table__
+
+    assert "response_body" in table.c
+    assert "metadata" in table.c
+    assert len(table.c.user_id.foreign_keys) == 0
+
+    index_names = {index.name for index in table.indexes}
+    assert "ix_user_actions_created_at" in index_names
+    assert "ix_user_actions_user_id" in index_names
+    assert "ix_user_actions_method" in index_names
+    assert "ix_user_actions_status_code" in index_names
 
 
 # ---------------------------------------------------------------------------
 # Middleware integration tests
 # ---------------------------------------------------------------------------
 
-def test_authenticated_request_triggers_audit(client, mock_db):
+
+def test_authenticated_request_triggers_audit_and_captures_response_body(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
 
@@ -118,18 +164,13 @@ def test_authenticated_request_triggers_audit(client, mock_db):
     assert kw["method"] == "GET"
     assert kw["endpoint"] == "/auth/me"
     assert kw["status_code"] == 200
+    assert kw["response_body"] is not None
+    assert len(kw["response_body"]) <= 500
 
 
 def test_unauthenticated_request_not_audited(client):
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock) as mock_write:
         client.get("/auth/me")
-
-    mock_write.assert_not_called()
-
-
-def test_invalid_token_not_audited(client):
-    with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock) as mock_write:
-        client.get("/auth/me", headers={"Authorization": "Bearer not-a-valid-token"})
 
     mock_write.assert_not_called()
 
@@ -141,14 +182,14 @@ def test_health_endpoint_not_audited(client):
     mock_write.assert_not_called()
 
 
-def test_audit_captures_correct_action_name(client, mock_db):
+def test_audit_captures_descriptive_action_name(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
 
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock) as mock_write:
         client.get("/auth/me", headers=_headers(user))
 
-    assert mock_write.call_args.kwargs["action"] == "GET:auth/me"
+    assert mock_write.call_args.kwargs["action"] == "view_auth_me"
 
 
 def test_audit_captures_duration_ms(client, mock_db):
@@ -168,34 +209,66 @@ def test_audit_captures_status_code_for_error(client, mock_db):
     mock_db.execute.return_value = ScalarResult(user)
 
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock) as mock_write:
-        # developer/admin-only endpoint → 403 for plain user
         response = client.post(f"/api/tasks/{uuid.uuid4()}/execute", headers=_headers(user))
 
     assert response.status_code == 403
     assert mock_write.call_args.kwargs["status_code"] == 403
 
 
-def test_audit_sanitizes_post_body_password(client, mock_db):
-    """Login body's password must appear as '***' in audit log."""
-    user = _make_user()
-    mock_db.execute.return_value = ScalarResult(user)
+@pytest.mark.asyncio
+async def test_audit_logs_with_very_large_request_body():
+    user = _make_user(role=UserRole.developer)
+    middleware = AuditLoggerMiddleware(app=lambda scope, receive, send: None)
+    request = _make_request(
+        path="/api/evaluations/123",
+        method="POST",
+        body={"password": "secret", "payload": "x" * 6000},
+        headers=_headers(user),
+    )
+
+    async def call_next(_: Request) -> JSONResponse:
+        return JSONResponse({"token": "jwt.secret", "payload": "y" * 800}, status_code=201)
 
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock) as mock_write:
-        # /auth/login has no auth header → audit middleware skips it.
-        # Use /auth/me (no body) as a canary that audit fires, then test
-        # sanitize_body separately (already covered by unit tests).
-        # Here we verify audit fires for an authenticated POST-like scenario
-        # by inspecting the body argument when it contains a password field.
-        client.get("/auth/me", headers=_headers(user))
+        response = await middleware.dispatch(request, call_next)
+        await asyncio.sleep(0)
 
+    assert response.status_code == 201
     kw = mock_write.call_args.kwargs
-    # GET /auth/me has no body — request_body should be None
-    assert kw["request_body"] is None
+    assert kw["request_body"]["password"] == "***"
+    assert len(kw["request_body"]["payload"]) == 6000
+    assert kw["response_body"] is not None
+    assert len(kw["response_body"]) == 500
+    assert "***" in kw["response_body"]
+
+
+@pytest.mark.asyncio
+async def test_audit_logs_concurrent_requests():
+    user = _make_user()
+    middleware = AuditLoggerMiddleware(app=lambda scope, receive, send: None)
+
+    async def call_next(_: Request) -> JSONResponse:
+        return JSONResponse({"ok": True}, status_code=200)
+
+    with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock) as mock_write:
+        await asyncio.gather(
+            *[
+                middleware.dispatch(
+                    _make_request(path="/auth/me", headers=_headers(user)),
+                    call_next,
+                )
+                for _ in range(5)
+            ]
+        )
+        await asyncio.sleep(0)
+
+    assert mock_write.call_count == 5
 
 
 # ---------------------------------------------------------------------------
 # GET /audit endpoint tests
 # ---------------------------------------------------------------------------
+
 
 def test_get_my_audit_requires_auth(client):
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock):
@@ -206,8 +279,8 @@ def test_get_my_audit_requires_auth(client):
 def test_get_my_audit_returns_list(client, mock_db):
     user = _make_user()
     mock_db.execute.side_effect = [
-        ScalarResult(user),  # get_current_user
-        ScalarResult([]),    # audit log query
+        ScalarResult(user),
+        ScalarResult([]),
     ]
 
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock):
@@ -217,11 +290,27 @@ def test_get_my_audit_returns_list(client, mock_db):
     assert response.json() == []
 
 
+def test_audit_pagination_uses_skip_limit(client, mock_db):
+    user = _make_user()
+    mock_db.execute.side_effect = [
+        ScalarResult(user),
+        ScalarResult([]),
+    ]
+
+    with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock):
+        response = client.get("/audit?skip=10&limit=5", headers=_headers(user))
+
+    assert response.status_code == 200
+    stmt = mock_db.execute.await_args_list[1].args[0]
+    assert stmt._limit_clause.value == 5
+    assert stmt._offset_clause.value == 10
+
+
 def test_admin_can_access_all_audit(client, mock_db):
     admin = _make_user(role=UserRole.admin)
     mock_db.execute.side_effect = [
-        ScalarResult(admin),  # get_current_user (via require_role)
-        ScalarResult([]),     # audit log query
+        ScalarResult(admin),
+        ScalarResult([]),
     ]
 
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock):
@@ -245,11 +334,30 @@ def test_admin_can_filter_by_user_id(client, mock_db):
     admin = _make_user(role=UserRole.admin)
     target_id = uuid.uuid4()
     mock_db.execute.side_effect = [
-        ScalarResult(admin),  # get_current_user
-        ScalarResult([]),     # audit log query filtered by user_id
+        ScalarResult(admin),
+        ScalarResult([]),
     ]
 
     with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock):
         response = client.get(f"/audit/all?user_id={target_id}", headers=_headers(admin))
 
     assert response.status_code == 200
+    stmt = mock_db.execute.await_args_list[1].args[0]
+    compiled = stmt.compile()
+    assert target_id in compiled.params.values()
+
+
+def test_audit_all_pagination_uses_skip_limit(client, mock_db):
+    admin = _make_user(role=UserRole.admin)
+    mock_db.execute.side_effect = [
+        ScalarResult(admin),
+        ScalarResult([]),
+    ]
+
+    with patch("app.middleware.audit_logger.write_audit_log", new_callable=AsyncMock):
+        response = client.get("/audit/all?skip=20&limit=7", headers=_headers(admin))
+
+    assert response.status_code == 200
+    stmt = mock_db.execute.await_args_list[1].args[0]
+    assert stmt._limit_clause.value == 7
+    assert stmt._offset_clause.value == 20

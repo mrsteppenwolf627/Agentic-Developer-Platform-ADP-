@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import threading
 import uuid
 from pathlib import Path
@@ -11,9 +12,21 @@ from app.services.context_manager import ContextManager
 from tests.conftest import ScalarResult
 
 
+@pytest.fixture
+def workspace_tmp_path():
+    tmp_root = Path.cwd() / ".tmp_context_manager_tests"
+    tmp_root.mkdir(exist_ok=True)
+    case_dir = tmp_root / uuid.uuid4().hex
+    case_dir.mkdir()
+    try:
+        yield case_dir
+    finally:
+        shutil.rmtree(case_dir, ignore_errors=True)
+
+
 @pytest.mark.asyncio
-async def test_snapshot_context_stores_entry_in_rollback_stack(mock_db, tmp_path):
-    context_path = tmp_path / "CONTEXT.md"
+async def test_snapshot_context_stores_entry_in_rollback_stack(mock_db, workspace_tmp_path):
+    context_path = workspace_tmp_path / "CONTEXT.md"
     context_path.write_text("# CONTEXT\nInitial state\n", encoding="utf-8")
     manager = ContextManager(context_path=context_path)
 
@@ -25,8 +38,8 @@ async def test_snapshot_context_stores_entry_in_rollback_stack(mock_db, tmp_path
 
 
 @pytest.mark.asyncio
-async def test_restore_context_rewrites_context_md(mock_db, tmp_path):
-    context_path = tmp_path / "CONTEXT.md"
+async def test_restore_context_rewrites_context_md(mock_db, workspace_tmp_path):
+    context_path = workspace_tmp_path / "CONTEXT.md"
     context_path.write_text("changed", encoding="utf-8")
     manager = ContextManager(context_path=context_path)
     rollback_id = uuid.uuid4()
@@ -49,8 +62,8 @@ async def test_restore_context_rewrites_context_md(mock_db, tmp_path):
     assert entry.state is RollbackState.rolled_back
 
 
-def test_update_context_marks_task_as_completed(tmp_path):
-    context_path = tmp_path / "CONTEXT.md"
+def test_update_context_marks_task_as_completed(workspace_tmp_path):
+    context_path = workspace_tmp_path / "CONTEXT.md"
     context_path.write_text(
         "## TAREAS EJECUTADAS HOY\n- [ ] **Task #6:** Tests + Deploy -> Completada por [modelo] @ [hora]\n\n## ULTIMA ACTUALIZACION\n- **Fecha:** 2026-04-16 12:30\n- **Por:** Gemini\n- **Cambios:** React dashboard minimo viable\n",
         encoding="utf-8",
@@ -76,9 +89,9 @@ _MULTI_TASK_TEMPLATE = (
 )
 
 
-def test_concurrent_writes_no_data_corruption(tmp_path):
+def test_concurrent_writes_no_data_corruption(workspace_tmp_path):
     """All concurrent update_context calls persist — no overwrites."""
-    context_path = tmp_path / "CONTEXT.md"
+    context_path = workspace_tmp_path / "CONTEXT.md"
     context_path.write_text(_MULTI_TASK_TEMPLATE, encoding="utf-8")
     manager = ContextManager(context_path=context_path)
 
@@ -104,9 +117,9 @@ def test_concurrent_writes_no_data_corruption(tmp_path):
         assert f"- [x] **Task #{i}:**" in final, f"Task #{i} was overwritten by a concurrent write"
 
 
-def test_writes_are_serialized(tmp_path):
+def test_writes_are_serialized(workspace_tmp_path):
     """No two threads hold the context lock simultaneously during file writes."""
-    context_path = tmp_path / "CONTEXT.md"
+    context_path = workspace_tmp_path / "CONTEXT.md"
     context_path.write_text(_MULTI_TASK_TEMPLATE, encoding="utf-8")
     manager = ContextManager(context_path=context_path)
 
@@ -148,9 +161,9 @@ def test_writes_are_serialized(tmp_path):
     assert not overlap_detected.is_set(), "Concurrent file writes detected — lock is not working"
 
 
-def test_lock_blocks_concurrent_access(tmp_path):
+def test_lock_blocks_concurrent_access(workspace_tmp_path):
     """While _locked is held, a second non-blocking acquire must fail."""
-    context_path = tmp_path / "CONTEXT.md"
+    context_path = workspace_tmp_path / "CONTEXT.md"
     context_path.write_text("# test\n", encoding="utf-8")
     manager = ContextManager(context_path=context_path)
 
@@ -170,7 +183,7 @@ def test_lock_blocks_concurrent_access(tmp_path):
     assert second_acquired == [False], "Lock should have blocked the second acquire"
 
 
-def test_lock_timeout_raises_on_held_lock(tmp_path):
+def test_lock_timeout_raises_on_held_lock(workspace_tmp_path):
     """_locked raises TimeoutError when acquire returns False (simulated busy lock)."""
 
     class _AlwaysLockedLock:
@@ -180,7 +193,7 @@ def test_lock_timeout_raises_on_held_lock(tmp_path):
         def release(self) -> None:
             pass
 
-    context_path = tmp_path / "CONTEXT.md"
+    context_path = workspace_tmp_path / "CONTEXT.md"
     context_path.write_text("# test\n", encoding="utf-8")
     manager = ContextManager(context_path=context_path)
     manager._context_lock = _AlwaysLockedLock()  # type: ignore[assignment]
@@ -188,4 +201,3 @@ def test_lock_timeout_raises_on_held_lock(tmp_path):
     with pytest.raises(TimeoutError, match="context_lock timeout"):
         with manager._locked("test_timeout"):
             pass
-

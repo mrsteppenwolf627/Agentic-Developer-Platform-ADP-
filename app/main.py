@@ -52,10 +52,12 @@ app.include_router(tasks_router)
 app.include_router(evaluations_router)
 app.include_router(webhooks_router)
 
-# Static files from the React build (served at /static/*)
+# Static files from the React build
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
-if os.path.exists(_FRONTEND_DIST):
-    app.mount("/static", StaticFiles(directory=_FRONTEND_DIST, html=True), name="static")
+_ASSETS_DIR = os.path.join(_FRONTEND_DIST, "assets")
+if os.path.exists(_ASSETS_DIR):
+    # Mount /assets to match Vite's default output (base="/")
+    app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
 
 
 @app.get("/health", tags=["system"])

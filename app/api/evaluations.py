@@ -10,8 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies.security import get_current_user
 from app.evaluators import Finding
-from app.models.schemas import Evaluation, Task
+from app.models.schemas import Evaluation, Task, User
 from app.services.evaluation_engine import EvaluationResult
 from app.services.task_executor import TaskExecutor
 
@@ -79,6 +80,7 @@ async def evaluate_task(
     task_id: uuid.UUID,
     body: EvaluateTaskRequest,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ) -> EvaluationSummaryResponse:
     task = await _get_task_or_404(task_id, db)
     output_code = body.output_code or task.output
@@ -101,6 +103,7 @@ async def evaluate_task(
 async def get_evaluation(
     task_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ) -> EvaluationSummaryResponse:
     await _get_task_or_404(task_id, db)
 

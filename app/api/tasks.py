@@ -22,7 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.dependencies.security import get_current_user
 from app.models.schemas import (
+    User,
     AgentSessionResponse,
     EvaluationResponse,
     RollbackStackResponse,
@@ -149,6 +151,7 @@ async def _get_ticket_or_404(ticket_id: uuid.UUID, db: AsyncSession) -> Ticket:
 async def execute_task(
     task_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ) -> ExecuteResponse:
     # Verify task exists before spinning up executor
     await _get_task_or_404(task_id, db)
@@ -200,6 +203,7 @@ async def execute_task(
 async def get_task(
     task_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ) -> TaskDetailResponse:
     task = await _get_task_or_404(task_id, db)
 
@@ -221,6 +225,7 @@ async def list_tasks_by_ticket(
     ticket_id: uuid.UUID,
     status_filter: Optional[TaskStatus] = None,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ) -> List[TaskResponse]:
     # Verify ticket exists
     await _get_ticket_or_404(ticket_id, db)
@@ -249,6 +254,7 @@ async def rollback_task(
     task_id: uuid.UUID,
     body: RollbackRequest,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ) -> RollbackResponse:
     task = await _get_task_or_404(task_id, db)
     ctx = ContextManager()

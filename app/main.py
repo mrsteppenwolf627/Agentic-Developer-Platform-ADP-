@@ -24,6 +24,7 @@ from app.api.evaluations import router as evaluations_router
 from app.api.tasks import router as tasks_router
 from app.api.webhooks import router as webhooks_router
 from app.config import get_settings
+from app.middleware.rate_limiter import RateLimitMiddleware, RateLimitStore
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO").upper(),
@@ -59,6 +60,14 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Rate limiting — 100 req/min per authenticated user (configurable)
+rate_limit_store = RateLimitStore()
+app.add_middleware(
+    RateLimitMiddleware,
+    rate_limit_store=rate_limit_store,
+    limit=settings.rate_limit_per_minute,
 )
 
 # Routers

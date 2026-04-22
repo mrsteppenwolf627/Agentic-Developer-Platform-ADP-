@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.auth import router as auth_router
 from app.api.evaluations import router as evaluations_router
 from app.api.tasks import router as tasks_router
 from app.api.webhooks import router as webhooks_router
@@ -48,6 +49,7 @@ app.add_middleware(
 )
 
 # Routers
+app.include_router(auth_router)
 app.include_router(tasks_router)
 app.include_router(evaluations_router)
 app.include_router(webhooks_router)
@@ -78,7 +80,7 @@ async def health_models() -> dict:
 @app.get("/{full_path:path}", include_in_schema=False)
 async def serve_frontend(full_path: str) -> FileResponse:
     """SPA fallback — serve index.html for any non-API route."""
-    if full_path.startswith(("api/", "docs", "redoc", "openapi")):
+    if full_path.startswith(("api/", "auth/", "docs", "redoc", "openapi")):
         raise HTTPException(status_code=404, detail="Not found")
     index = os.path.join(_FRONTEND_DIST, "index.html")
     if os.path.exists(index):

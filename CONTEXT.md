@@ -42,6 +42,7 @@
 | 16 | Frontend Vercel Deploy | UNVERIFIED | Gemini | URL documentada `https://adp-frontend.vercel.app` responde `200`, pero sirve una web ajena a ADP |
 | 17 | Backend Vercel Deploy (FASE 3) | UNVERIFIED | Claude | Config Vercel lista, pero `https://adp-api.vercel.app/health` y `/docs` responden `404` |
 | 18 | Webhook API Routes + E2E local | DONE | Codex | `/webhooks/slack`, `/webhooks/jira`, `/webhooks/github` + `tests/test_webhooks_e2e.py` |
+| 19 | User Authentication (JWT + Login) | DONE | Claude + Codex | PRE-FASE 4.0 foundation |
 
 ### Completado
 
@@ -207,10 +208,33 @@ PR required: True (si no es trivial)
 - [x] **Task #17:** Backend Vercel Deploy (FASE 3) -> Completada por Claude (claude-sonnet-4-6) @ 2026-04-21 ~12:00 | `Dockerfile`, `.dockerignore`, `vercel.json`, `.vercelignore`, `requirements.txt` (httpx añadido)
 
 - [x] **Task #18:** Webhook API Routes + E2E local -> Completada por Codex (GPT-5) @ 2026-04-21 ~13:35 | `app/api/webhooks.py`, `app/main.py`, `tests/test_webhooks_e2e.py`
+- [x] **Task #19:** Auth Login Basic (PRE-4.0) -> Completada por Claude Code @ 2026-04-22 13:08
+  - Archivos creados:
+    - `app/dependencies/security.py` (JWT logic: `hash_password`, `verify_password`, `create_access_token`, `get_current_user`)
+    - `app/api/auth.py` (endpoints: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`)
+    - `alembic/versions/002_add_user_table.py` (migration users table)
+  - Archivos modificados:
+    - `app/models/schemas.py` (User ORM + `UserCreate`/`UserLogin`/`UserResponse` schemas)
+    - `app/main.py` (`include_router(auth_router)` + auth validation handler)
+    - `app/api/tasks.py` (`current_user` dependency en endpoints)
+    - `app/api/evaluations.py` (`current_user` dependency en endpoints)
+    - `app/config.py` (`JWT_SECRET`, `JWT_ALGORITHM`, `JWT_EXPIRATION_MINUTES`)
+  - Endpoints funcionales:
+    - `POST /auth/register` -> `201` (crear usuario)
+    - `POST /auth/login` -> `200` (generar JWT token)
+    - `GET /auth/me` -> `200` (usuario autenticado)
+  - Security validations: bcrypt password hashing, JWT validation, email format check
+  - Tests: `12` tests en `tests/test_auth.py` (`pytest`) -> TODOS PASANDO
 
 ---
 
 ## ULTIMA ACTUALIZACION
+
+- **Fecha:** 2026-04-22 13:08
+- **Por:** Codex (GPT-4o)
+- **Cambios:** Completada PRE-FASE 4.0 Auth Login Basic. User model, JWT endpoints (`/auth/register`, `/auth/login`, `/auth/me`), security module y migration validados. Endpoints existentes (`/api/tasks`, `/api/evaluations`) protegidos con JWT. `12/12` tests de auth pasando y tests API legacy ajustados al flujo autenticado.
+- **Archivos creados:** `app/dependencies/security.py`, `app/api/auth.py`, `alembic/versions/002_add_user_table.py`, `tests/test_auth.py`
+- **Archivos modificados:** `app/models/schemas.py`, `app/main.py`, `app/config.py`, `app/api/tasks.py`, `app/api/evaluations.py`, `README.md`, `CONTEXT.md`, `tests/conftest.py`, `tests/test_api_endpoints.py`
 
 - **Fecha:** 2026-04-21 13:35 (FASE 3 verificada parcialmente por Codex)
 - **Por:** Codex (GPT-5)

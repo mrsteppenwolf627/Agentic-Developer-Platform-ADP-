@@ -536,7 +536,7 @@ frontend/
 ```bash
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ### Frontend
@@ -557,6 +557,7 @@ OPENAI_API_KEY=...
 LITELLM_MASTER_KEY=
 SQL_ECHO=false
 APP_ENV=development
+JWT_SECRET=replace-with-a-long-random-secret
 ```
 
 ### Migraciones
@@ -580,6 +581,32 @@ python -m uvicorn app.main:app --reload --port 8001
 ```bash
 cd frontend
 npm run dev -- --port 5174
+```
+
+## Authentication
+
+### Register
+
+```bash
+curl -X POST http://localhost:8001/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}'
+```
+
+### Login
+
+```bash
+curl -X POST http://localhost:8001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}'
+# Returns: {"access_token": "eyJ...", "token_type": "bearer", "user": {...}}
+```
+
+### Use token
+
+```bash
+curl -X GET http://localhost:8001/auth/me \
+  -H "Authorization: Bearer eyJ..."
 ```
 
 ## Testing

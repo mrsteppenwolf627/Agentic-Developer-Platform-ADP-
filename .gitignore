@@ -1,9 +1,11 @@
 .env
 __pycache__/
+pycache/
 *.pyc
 *.pyo
 .venv/
 venv/
+.pytest_cache/
 frontend/node_modules/
 frontend/dist/
 .coverage

@@ -62,7 +62,7 @@ if os.path.exists(_ASSETS_DIR):
 
 @app.get("/health", tags=["system"])
 async def health() -> dict:
-    return {"status": "ok", "env": settings.app_env, "version": "0.1.0"}
+    return {"status": "ok", "env": settings.app_env, "version": "0.1.1"}
 
 
 @app.get("/health/models", tags=["system"])

@@ -43,6 +43,7 @@
 | 17 | Backend Vercel Deploy (FASE 3) | UNVERIFIED | Claude | Config Vercel lista, pero `https://adp-api.vercel.app/health` y `/docs` responden `404` |
 | 18 | Webhook API Routes + E2E local | DONE | Codex | `/webhooks/slack`, `/webhooks/jira`, `/webhooks/github` + `tests/test_webhooks_e2e.py` |
 | 19 | User Authentication (JWT + Login) | DONE | Claude + Codex | PRE-FASE 4.0 foundation |
+| 20 | RBAC - Role-Based Access Control (FASE 4.1) | DONE | Claude + Codex | Roles: admin, developer, user |
 
 ### Completado
 
@@ -225,10 +226,34 @@ PR required: True (si no es trivial)
     - `GET /auth/me` -> `200` (usuario autenticado)
   - Security validations: bcrypt password hashing, JWT validation, email format check
   - Tests: `12` tests en `tests/test_auth.py` (`pytest`) -> TODOS PASANDO
+- [x] **Task #20:** RBAC - Role-Based Access Control (FASE 4.1) -> Completada por Claude Code @ 2026-04-22 13:47
+  - Archivos creados:
+    - `tests/test_rbac.py` (20 tests de RBAC: autorización por rol, `403` responses, tokens inválidos, etc.)
+  - Archivos modificados:
+    - `app/dependencies/security.py` (decorator `require_role(allowed_roles: List[UserRole])`)
+    - `app/api/tasks.py` (4 endpoints protegidos: `execute`, `rollback`, `get_task`, `list_by_ticket`)
+    - `app/api/evaluations.py` (2 endpoints protegidos)
+    - `app/api/auth.py` (nuevo: `POST /auth/admin/users` -> solo admin puede crear usuarios con rol asignado)
+  - Matriz de roles implementada:
+    - `user`: lectura (`GET` endpoints solo)
+    - `developer`: lectura + ejecución (`POST /api/tasks/{task_id}/execute`, `POST /api/evaluations/{task_id}`)
+    - `admin`: acceso total + crear usuarios
+  - HTTP status codes:
+    - `401 Unauthorized`: sin token o token inválido
+    - `403 Forbidden`: token válido pero rol insuficiente
+    - `200 OK`: acceso permitido
+  - Tests: `20` tests en `tests/test_rbac.py` (`pytest`) -> TODOS PASANDO
+  - Security validations: role-based authorization, correct HTTP status codes, error messages claros
 
 ---
 
 ## ULTIMA ACTUALIZACION
+
+- **Fecha:** 2026-04-22 13:47
+- **Por:** Codex (GPT-4o)
+- **Cambios:** Completada FASE 4.1 RBAC. Implementado `require_role`, protegidos endpoints por rol (`admin`/`developer`/`user`), ajustado `GET /api/evaluations/{task_id}` a lectura para `user`, y normalizado el `403 Forbidden` a `Acceso denegado. Se requieren roles: ...`. `20/20` tests RBAC pasando. Matriz de autorización: `user` (solo lectura), `developer` (lectura + ejecución), `admin` (acceso total + crear usuarios).
+- **Archivos creados:** `tests/test_rbac.py`
+- **Archivos modificados:** `app/dependencies/security.py`, `app/api/tasks.py`, `app/api/evaluations.py`, `app/api/auth.py`, `README.md`, `CONTEXT.md`
 
 - **Fecha:** 2026-04-22 13:08
 - **Por:** Codex (GPT-4o)

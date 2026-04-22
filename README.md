@@ -609,6 +609,48 @@ curl -X GET http://localhost:8001/auth/me \
   -H "Authorization: Bearer eyJ..."
 ```
 
+## Authorization / RBAC
+
+ADP implementa Role-Based Access Control (RBAC) con tres roles:
+
+### User Role
+
+- Acceso: lectura solo (`GET` endpoints)
+- Endpoints: `GET /api/tasks/{task_id}`, `GET /api/tasks/ticket/{ticket_id}`, `GET /api/evaluations/{task_id}`, `GET /auth/me`
+
+### Developer Role
+
+- Acceso: lectura + ejecución
+- Endpoints: `POST /api/tasks/{task_id}/execute`, `POST /api/tasks/{task_id}/rollback`, `POST /api/evaluations/{task_id}`, más todos los `GET`
+
+### Admin Role
+
+- Acceso: total sobre el API actual
+- Endpoints: todos los anteriores, incluyendo `POST /auth/admin/users`
+
+### Ejemplo de uso
+
+```bash
+# 1. Loguear como usuario
+TOKEN=$(curl -X POST http://localhost:8001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}' \
+  | jq -r '.access_token')
+
+# 2. Intentar ejecutar una task como usuario normal -> 403 Forbidden
+curl -X POST http://localhost:8001/api/tasks/11111111-1111-1111-1111-111111111111/execute \
+  -H "Authorization: Bearer $TOKEN"
+# Respuesta: 403 Forbidden
+
+# 3. Admin crea usuario con rol developer
+ADMIN_TOKEN=... # token de admin
+curl -X POST http://localhost:8001/auth/admin/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "dev@example.com", "password": "password123", "role": "developer"}'
+# Respuesta: 201 Created + usuario con role=developer
+```
+
 ## Testing
 
 - Backend: `pytest tests/ --cov=app --cov-report=html`

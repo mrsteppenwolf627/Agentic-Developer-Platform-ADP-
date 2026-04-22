@@ -206,7 +206,7 @@ def auth_user():
         id=uuid.uuid4(),
         email="auth@example.com",
         password_hash="hashed-value",
-        role=UserRole.user,
+        role=UserRole.developer,
         is_active=True,
         created_at=now,
         updated_at=now,

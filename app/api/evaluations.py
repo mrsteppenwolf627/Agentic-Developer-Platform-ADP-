@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.security import get_current_user, require_role
+from app.dependencies.security import require_role
 from app.evaluators import Finding
 from app.models.schemas import Evaluation, Task, User, UserRole
 from app.services.evaluation_engine import EvaluationResult
@@ -103,7 +103,7 @@ async def evaluate_task(
 async def get_evaluation(
     task_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role([UserRole.admin, UserRole.developer])),
+    _: User = Depends(require_role([UserRole.admin, UserRole.developer, UserRole.user])),
 ) -> EvaluationSummaryResponse:
     await _get_task_or_404(task_id, db)
 

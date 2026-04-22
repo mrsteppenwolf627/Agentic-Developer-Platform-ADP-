@@ -97,9 +97,10 @@ def require_role(allowed_roles: List[UserRole]):
     """
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role not in allowed_roles:
+            roles_text = ", ".join(role.value for role in allowed_roles)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required roles: {[r.value for r in allowed_roles]}",
+                detail=f"Acceso denegado. Se requieren roles: {roles_text}",
             )
         return current_user
 

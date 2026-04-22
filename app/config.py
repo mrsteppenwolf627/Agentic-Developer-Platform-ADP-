@@ -104,6 +104,15 @@ class Settings(BaseSettings):
     jwt_expiration_minutes: int = Field(default=15)
 
     # ------------------------------------------------------------------
+    # Rate Limiting (FASE 4.2)
+    # ------------------------------------------------------------------
+    rate_limit_per_minute: int = Field(
+        default=100,
+        alias="RATE_LIMIT_PER_MINUTE",
+        description="Max requests per minute per authenticated user. 0 = disabled.",
+    )
+
+    # ------------------------------------------------------------------
     # Application
     # ------------------------------------------------------------------
     app_env: str = Field(default="development")

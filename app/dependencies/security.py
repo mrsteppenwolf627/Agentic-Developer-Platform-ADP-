@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import List, Optional
 
 import bcrypt
 import jwt
@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.models.schemas import User
+from app.models.schemas import User, UserRole
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -87,3 +87,20 @@ async def get_current_user(
     if user is None or not user.is_active:
         raise credentials_exception
     return user
+
+
+def require_role(allowed_roles: List[UserRole]):
+    """Return a FastAPI dependency that enforces role-based access.
+
+    Usage:
+        current_user: User = Depends(require_role([UserRole.admin, UserRole.developer]))
+    """
+    async def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Required roles: {[r.value for r in allowed_roles]}",
+            )
+        return current_user
+
+    return role_checker

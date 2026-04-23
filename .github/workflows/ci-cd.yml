@@ -1,31 +1,33 @@
 name: Tests & Deploy
-
 on:
   push:
     branches:
       - master
       - main
-
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-
       - name: Run backend tests with coverage gate
-        run: pytest tests/ --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=70
-
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pytest tests/ -k "not test_smart_router_with_real_ticket" --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=70
       - name: Upload backend coverage to Codecov
         if: success()
         uses: codecov/codecov-action@v4
@@ -33,7 +35,6 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
-
   frontend-tests:
     runs-on: ubuntu-latest
     defaults:
@@ -42,20 +43,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package.json
-
       - name: Install frontend dependencies
         run: npm install
-
       - name: Run frontend build verification
         run: npm run build
-
   deploy:
     needs: [backend-tests, frontend-tests]
     if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')

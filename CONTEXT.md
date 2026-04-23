@@ -46,7 +46,8 @@
 | 20 | RBAC - Role-Based Access Control (FASE 4.1) | DONE | Claude + Codex | Roles: admin, developer, user |
 | 21 | Rate Limiting (FASE 4.2) | DONE | Claude + Codex | 100 req/min per user |
 | 22 | Audit Logging (FASE 4.3) | DONE | Claude + Codex | Fire-and-forget, user_actions table |
-| 23 | Advanced Routing (FASE 5) | DONE | Codex | Dynamic selection, fallback chains, load-aware routing |
+| 23 | Advanced Models | DONE | Codex | 23 tests, dynamic routing, fallback chains |
+| C | Frontend React | IN PROGRESS | Gemini | LoginForm, RegisterForm, Dashboard |
 
 ### Completado
 
@@ -318,6 +319,10 @@ PR required: True (si no es trivial)
 ---
 
 ## ULTIMA ACTUALIZACION
+
+- **Fecha:** 2026-04-23 10:14
+- **Por:** Codex
+- **Cambios:** Mergeado FASE 5 a `master`. Rama `feature/frontend-react-option-c` creada.
 
 - **Fecha:** 2026-04-23 09:57
 - **Por:** Codex (GPT-4o)

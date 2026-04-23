@@ -4,11 +4,13 @@ from app.agents.litellm_router import ModelRouter, RouteResult, RouterError, Mod
 from app.agents.prompts import PromptBuilder
 from app.agents.smart_router import (
     SmartRouter,
+    FallbackChain,
     ExecutionMode,
     ExecutionPlan,
     ExecutionResult,
     ComponentAnalysis,
     ComponentResult,
+    RoutingResult,
 )
 
 __all__ = [
@@ -19,9 +21,11 @@ __all__ = [
     "get_router",
     "PromptBuilder",
     "SmartRouter",
+    "FallbackChain",
     "ExecutionMode",
     "ExecutionPlan",
     "ExecutionResult",
     "ComponentAnalysis",
     "ComponentResult",
+    "RoutingResult",
 ]

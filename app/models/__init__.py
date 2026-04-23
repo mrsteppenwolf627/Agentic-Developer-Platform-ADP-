@@ -13,6 +13,7 @@ from app.models.schemas import (
     AgentSession,
     User,
     UserAction,
+    RoutingDecision,
 )
 
 # Python Enums
@@ -85,13 +86,13 @@ from app.models.schemas import (
 )
 
 # Pydantic Schemas — UserAction
-from app.models.schemas import UserActionResponse
+from app.models.schemas import UserActionResponse, RoutingDecisionResponse
 
 __all__ = [
     # Base
     "Base",
     # ORM Models
-    "Ticket", "Task", "Evaluation", "RollbackStack", "Adr", "AgentSession", "User", "UserAction",
+    "Ticket", "Task", "Evaluation", "RollbackStack", "Adr", "AgentSession", "User", "UserAction", "RoutingDecision",
     # Enums
     "TicketStatus", "TicketPriority", "AgentModel", "TaskStatus",
     "EvaluationType", "EvaluationModel", "RollbackState", "AdrStatus", "SessionStatus",
@@ -111,5 +112,5 @@ __all__ = [
     # Pydantic — User
     "UserCreate", "UserLogin", "UserResponse", "UserInDB",
     # Pydantic — UserAction
-    "UserActionResponse",
+    "UserActionResponse", "RoutingDecisionResponse",
 ]

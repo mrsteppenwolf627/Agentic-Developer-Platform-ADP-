@@ -46,6 +46,7 @@
 | 20 | RBAC - Role-Based Access Control (FASE 4.1) | DONE | Claude + Codex | Roles: admin, developer, user |
 | 21 | Rate Limiting (FASE 4.2) | DONE | Claude + Codex | 100 req/min per user |
 | 22 | Audit Logging (FASE 4.3) | DONE | Claude + Codex | Fire-and-forget, user_actions table |
+| 23 | Advanced Routing (FASE 5) | DONE | Codex | Dynamic selection, fallback chains, load-aware routing |
 
 ### Completado
 
@@ -290,10 +291,39 @@ PR required: True (si no es trivial)
   - Endpoints excluidos: `/health`, `/health/models`, `/docs`, `/redoc`, `/openapi.json`, `/webhooks/*`
   - Tests: `26` en `tests/test_audit_logging.py` (`pytest`) -> TODOS PASANDO
   - Total tests proyecto: `69/69` (`12 auth + 20 RBAC + 11 rate limit + 26 audit`)
+- [x] **Task #23:** Advanced Routing (FASE 5) -> Completada por Codex @ 2026-04-23 09:57
+  - Archivos creados:
+    - `app/integrations/smart_router.py` (compat wrapper para FASE 5)
+    - `alembic/versions/004_add_routing_decisions_table.py` (tabla `routing_decisions`)
+    - `tests/test_smart_router_advanced.py` (23 tests de routing avanzado)
+  - Archivos modificados:
+    - `app/agents/smart_router.py` (`choose_model`, `route`, `get_model_load`, `FallbackChain`, logging de decisiones)
+    - `app/models/schemas.py` (`RoutingDecision` ORM + schema)
+    - `app/models/__init__.py` (exports)
+    - `app/agents/__init__.py` (exports)
+  - Nuevas capacidades:
+    - Dynamic model selection por `task_type` y `complexity`
+    - Fallback chains `Claude -> Gemini -> Codex`, `Gemini -> Claude -> Codex`, `Codex -> Claude -> Gemini`
+    - Load balancing básico via `agent_sessions` última hora
+    - Routing decision logging async + fire-and-forget en `routing_decisions`
+  - Persistencia:
+    - Tabla `routing_decisions` (`task_id`, `task_type`, `chosen_model`, `reasoning`, `latency_ms`, `success`, `created_at`)
+  - Tests:
+    - `23/23` en `tests/test_smart_router_advanced.py`
+    - `166/166` tests backend totales del repo pasando en esta rama
+  - Cobertura:
+    - `pytest tests/test_smart_router_advanced.py --cov=app.integrations.smart_router --cov-report=term-missing` -> OK
+    - La implementación real vive en `app/agents/smart_router.py`; el wrapper en `app/integrations/smart_router.py` mantiene compatibilidad con el contrato de FASE 5
 
 ---
 
 ## ULTIMA ACTUALIZACION
+
+- **Fecha:** 2026-04-23 09:57
+- **Por:** Codex (GPT-4o)
+- **Cambios:** Completada FASE 5 Advanced Routing. `SmartRouter` ahora soporta dynamic model selection, fallback chains con backoff exponencial, load balancing básico usando `agent_sessions`, y logging async de decisiones en tabla `routing_decisions`. Suite nueva `tests/test_smart_router_advanced.py` pasando y full-suite del repo en esta rama: `166/166`.
+- **Archivos creados:** `app/integrations/smart_router.py`, `alembic/versions/004_add_routing_decisions_table.py`, `tests/test_smart_router_advanced.py`
+- **Archivos modificados:** `app/agents/smart_router.py`, `app/models/schemas.py`, `app/models/__init__.py`, `app/agents/__init__.py`, `CONTEXT.md`
 
 - **Fecha:** 2026-04-22 16:14
 - **Por:** Codex (GPT-4o)

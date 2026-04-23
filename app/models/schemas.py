@@ -442,6 +442,34 @@ class UserAction(Base):
     )
 
 
+class RoutingDecision(Base):
+    """Advanced routing decision log for SmartRouter FASE 5."""
+    __tablename__ = "routing_decisions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sa.text("gen_random_uuid()"),
+    )
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    task_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    chosen_model: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    reasoning: Mapped[str] = mapped_column(Text, nullable=False)
+    latency_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=sa.text("false"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=sa.text("NOW()"),
+        nullable=False,
+        index=True,
+    )
+
+
 # ===========================================================================
 # 4. Pydantic Schemas
 # ===========================================================================
@@ -723,4 +751,17 @@ class UserActionResponse(BaseModel):
     duration_ms: Optional[int] = None
     error_message: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = Field(default=None, alias="metadata_")
+    created_at: datetime
+
+
+class RoutingDecisionResponse(BaseModel):
+    model_config = _ORM_CONFIG
+
+    id: uuid.UUID
+    task_id: uuid.UUID
+    task_type: str
+    chosen_model: str
+    reasoning: str
+    latency_ms: Optional[int] = None
+    success: bool
     created_at: datetime

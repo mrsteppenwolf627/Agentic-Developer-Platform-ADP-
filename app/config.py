@@ -102,6 +102,11 @@ class Settings(BaseSettings):
     )
     jwt_algorithm: str = Field(default="HS256")
     jwt_expiration_minutes: int = Field(default=15)
+    jwt_refresh_token_expiration_days: int = Field(
+        default=7,
+        alias="JWT_REFRESH_TOKEN_EXPIRATION_DAYS",
+        description="Refresh token lifetime in days.",
+    )
 
     # ------------------------------------------------------------------
     # Rate Limiting (FASE 4.2)

@@ -16,12 +16,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+import uuid as _uuid
+
+from app.config import get_settings
 from app.dependencies.security import (
     create_access_token,
+    create_refresh_token,
     get_current_user,
     hash_password,
     require_role,
     verify_password,
+    verify_refresh_token,
 )
 from app.models.schemas import User, UserCreate, UserLogin, UserResponse, UserRole
 
@@ -89,11 +94,15 @@ async def login(body: UserLogin, db: AsyncSession = Depends(get_db)) -> dict:
             detail="Account is inactive",
         )
 
-    token = create_access_token(user.id, user.email)
+    settings = get_settings()
+    access_token = create_access_token(user.id, user.email)
+    refresh_token = create_refresh_token(user.id)
     logger.info("login | user=%s id=%s", user.email, user.id)
     return {
-        "access_token": token,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
+        "expires_in": settings.jwt_expiration_minutes * 60,
         "user": UserResponse.model_validate(user),
     }
 
@@ -135,3 +144,39 @@ async def admin_create_user(
 
     logger.info("admin_create_user | email=%s role=%s by admin", user.email, user.role)
     return UserResponse.model_validate(user)
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh")
+async def refresh_token(
+    body: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Exchange a valid refresh token for a new access token."""
+    user_id = verify_refresh_token(body.refresh_token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    result = await db.execute(select(User).where(User.id == _uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+
+    settings = get_settings()
+    new_access_token = create_access_token(user.id, user.email)
+    logger.info("refresh | user=%s id=%s", user.email, user.id)
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+        "expires_in": settings.jwt_expiration_minutes * 60,
+    }

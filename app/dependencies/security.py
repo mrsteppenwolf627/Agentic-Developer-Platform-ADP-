@@ -47,8 +47,34 @@ def create_access_token(user_id: uuid.UUID, email: str, expires_delta: Optional[
         "email": email,
         "iat": now,
         "exp": now + delta,
+        "type": "access",
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def create_refresh_token(user_id: uuid.UUID) -> str:
+    settings = _get_auth_settings()
+    now = datetime.now(tz=timezone.utc)
+    delta = timedelta(days=settings.jwt_refresh_token_expiration_days)
+    payload = {
+        "sub": str(user_id),
+        "iat": now,
+        "exp": now + delta,
+        "type": "refresh",
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def verify_refresh_token(token: str) -> Optional[str]:
+    """Verify a refresh token. Returns user_id (sub) or None if invalid."""
+    try:
+        settings = _get_auth_settings()
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        if payload.get("type") != "refresh":
+            return None
+        return payload.get("sub")
+    except (TypeError, ValueError, RuntimeError, jwt.PyJWTError):
+        return None
 
 
 async def get_current_user(
@@ -69,6 +95,9 @@ async def get_current_user(
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
         )
+        token_type = payload.get("type")
+        if token_type is not None and token_type != "access":
+            raise credentials_exception
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception

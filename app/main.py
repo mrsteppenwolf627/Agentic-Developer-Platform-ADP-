@@ -55,10 +55,15 @@ async def handle_request_validation_error(
         content={"detail": jsonable_encoder(exc.errors())},
     )
 
-# CORS — tighten origins in production
+# CORS — explicit origins required when allow_credentials=True (wildcard forbidden by browsers)
+_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://agentic-developer-platform-adp.vercel.app",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if not settings.is_production else ["https://your-frontend.com"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

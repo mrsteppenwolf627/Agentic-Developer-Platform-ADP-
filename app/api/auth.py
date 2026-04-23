@@ -8,17 +8,18 @@ POST /auth/admin/users       → admin-only: create user with explicit role
 from __future__ import annotations
 
 import logging
+import uuid as _uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-import uuid as _uuid
-
 from app.config import get_settings
+from app.database import get_db
 from app.dependencies.security import (
     create_access_token,
     create_refresh_token,
@@ -77,7 +78,19 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_db)) -> User
 
 
 @router.post("/login")
-async def login(body: UserLogin, db: AsyncSession = Depends(get_db)) -> dict:
+async def login(body: UserLogin, db: AsyncSession = Depends(get_db)) -> JSONResponse:
+    """Login endpoint.
+
+    Returns:
+    - access_token (JSON): Short-lived token (15 min) for API access.
+    - user (JSON): Authenticated user data.
+    - refresh_token (Cookie, HttpOnly): Long-lived token (7 days) for silent renewal.
+
+    Security:
+    - refresh_token is HttpOnly (inaccessible from JavaScript).
+    - secure=True in production (HTTPS only).
+    - samesite="strict" (CSRF protection).
+    """
     result = await db.execute(select(User).where(User.email == body.email.lower()))
     user = result.scalar_one_or_none()
 
@@ -96,15 +109,24 @@ async def login(body: UserLogin, db: AsyncSession = Depends(get_db)) -> dict:
 
     settings = get_settings()
     access_token = create_access_token(user.id, user.email)
-    refresh_token = create_refresh_token(user.id)
+    refresh_token_value = create_refresh_token(user.id)
     logger.info("login | user=%s id=%s", user.email, user.id)
-    return {
+
+    response = JSONResponse({
         "access_token": access_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer",
         "expires_in": settings.jwt_expiration_minutes * 60,
-        "user": UserResponse.model_validate(user),
-    }
+        "user": jsonable_encoder(UserResponse.model_validate(user)),
+    })
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token_value,
+        max_age=settings.jwt_refresh_token_expiration_days * 24 * 60 * 60,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="strict",
+    )
+    return response
 
 
 @router.get("/me", response_model=UserResponse)
@@ -146,17 +168,21 @@ async def admin_create_user(
     return UserResponse.model_validate(user)
 
 
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
 @router.post("/refresh")
-async def refresh_token(
-    body: RefreshTokenRequest,
+async def refresh_access_token(
+    request: Request,
     db: AsyncSession = Depends(get_db),
-) -> dict:
-    """Exchange a valid refresh token for a new access token."""
-    user_id = verify_refresh_token(body.refresh_token)
+) -> JSONResponse:
+    """Exchange the HttpOnly refresh-token cookie for a new access token."""
+    cookie_token = request.cookies.get("refresh_token")
+    if not cookie_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_id = verify_refresh_token(cookie_token)
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -175,8 +201,8 @@ async def refresh_token(
     settings = get_settings()
     new_access_token = create_access_token(user.id, user.email)
     logger.info("refresh | user=%s id=%s", user.email, user.id)
-    return {
+    return JSONResponse({
         "access_token": new_access_token,
         "token_type": "bearer",
         "expires_in": settings.jwt_expiration_minutes * 60,
-    }
+    })

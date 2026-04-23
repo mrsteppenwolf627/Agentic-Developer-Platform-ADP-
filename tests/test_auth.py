@@ -126,6 +126,23 @@ def test_login_success(client, mock_db):
     assert payload["token_type"] == "bearer"
     assert payload["access_token"]
     assert payload["user"]["email"] == user.email
+    assert "refresh_token" not in payload
+
+
+def test_login_sets_refresh_token_in_httponly_cookie(client, mock_db):
+    user = _make_user()
+    mock_db.execute.return_value = ScalarResult(user)
+
+    response = client.post(
+        "/auth/login",
+        json={"email": user.email, "password": "password123"},
+    )
+
+    assert response.status_code == 200
+    assert "refresh_token" in response.cookies
+    assert response.cookies["refresh_token"]  # not empty
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "httponly" in set_cookie.lower()
 
 
 def test_login_invalid_email(client, mock_db):

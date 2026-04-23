@@ -1,4 +1,4 @@
-"""JWT Refresh Token tests — FASE 4.4."""
+"""JWT Refresh Token tests — FASE 4.4 (HttpOnly cookie transport)."""
 from __future__ import annotations
 
 import uuid
@@ -60,8 +60,7 @@ def test_access_token_expires_in_15_minutes():
     payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
     iat = datetime.fromtimestamp(payload["iat"], tz=timezone.utc)
-    delta_minutes = (exp - iat).total_seconds() / 60
-    assert abs(delta_minutes - settings.jwt_expiration_minutes) < 1
+    assert abs((exp - iat).total_seconds() / 60 - settings.jwt_expiration_minutes) < 1
 
 
 def test_refresh_token_expires_in_7_days():
@@ -71,8 +70,7 @@ def test_refresh_token_expires_in_7_days():
     payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
     iat = datetime.fromtimestamp(payload["iat"], tz=timezone.utc)
-    delta_days = (exp - iat).total_seconds() / 86400
-    assert abs(delta_days - settings.jwt_refresh_token_expiration_days) < 0.1
+    assert abs((exp - iat).total_seconds() / 86400 - settings.jwt_refresh_token_expiration_days) < 0.1
 
 
 def test_verify_refresh_token_returns_user_id():
@@ -103,7 +101,7 @@ def test_verify_refresh_token_rejects_expired():
 
 
 # ---------------------------------------------------------------------------
-# Access token must be rejected at protected endpoints if type != "access"
+# Refresh token must be rejected when used as Bearer at protected endpoints
 # ---------------------------------------------------------------------------
 
 def test_refresh_token_rejected_at_protected_endpoint(client, mock_db):
@@ -115,39 +113,55 @@ def test_refresh_token_rejected_at_protected_endpoint(client, mock_db):
 
 
 # ---------------------------------------------------------------------------
-# POST /auth/login — now returns refresh token
+# POST /auth/login — access_token in JSON, refresh_token in HttpOnly cookie
 # ---------------------------------------------------------------------------
 
-def test_login_returns_both_tokens(client, mock_db):
+def test_login_returns_access_token_in_json_not_refresh(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
     response = client.post("/auth/login", json={"email": user.email, "password": "password123"})
     assert response.status_code == 200
     body = response.json()
     assert "access_token" in body
-    assert "refresh_token" in body
+    assert "refresh_token" not in body
     assert body["token_type"] == "bearer"
     assert body["expires_in"] == 900
 
 
-def test_login_refresh_token_is_valid(client, mock_db):
+def test_login_sets_refresh_token_as_httponly_cookie(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
     response = client.post("/auth/login", json={"email": user.email, "password": "password123"})
     assert response.status_code == 200
-    refresh_token = response.json()["refresh_token"]
-    assert verify_refresh_token(refresh_token) == str(user.id)
+    assert "refresh_token" in response.cookies
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "httponly" in set_cookie.lower()
+
+
+def test_login_refresh_cookie_contains_valid_token(client, mock_db):
+    user = _make_user()
+    mock_db.execute.return_value = ScalarResult(user)
+    response = client.post("/auth/login", json={"email": user.email, "password": "password123"})
+    assert response.status_code == 200
+    cookie_token = response.cookies["refresh_token"]
+    assert verify_refresh_token(cookie_token) == str(user.id)
 
 
 # ---------------------------------------------------------------------------
-# POST /auth/refresh
+# POST /auth/refresh — reads refresh_token from HttpOnly cookie
 # ---------------------------------------------------------------------------
+
+def test_refresh_with_no_cookie_returns_401(client):
+    response = client.post("/auth/refresh")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "No refresh token found"
+
 
 def test_refresh_returns_new_access_token(client, mock_db):
     user = _make_user()
     mock_db.execute.return_value = ScalarResult(user)
     token = create_refresh_token(user.id)
-    response = client.post("/auth/refresh", json={"refresh_token": token})
+    response = client.post("/auth/refresh", cookies={"refresh_token": token})
     assert response.status_code == 200
     body = response.json()
     assert "access_token" in body
@@ -155,18 +169,18 @@ def test_refresh_returns_new_access_token(client, mock_db):
     assert body["expires_in"] == 900
 
 
-def test_refresh_with_invalid_token_returns_401(client):
-    response = client.post("/auth/refresh", json={"refresh_token": "invalid.token"})
+def test_refresh_with_invalid_cookie_returns_401(client):
+    response = client.post("/auth/refresh", cookies={"refresh_token": "invalid.token.here"})
     assert response.status_code == 401
 
 
-def test_refresh_with_access_token_returns_401(client):
+def test_refresh_with_access_token_in_cookie_returns_401(client):
     token = create_access_token(uuid.uuid4(), "u@example.com")
-    response = client.post("/auth/refresh", json={"refresh_token": token})
+    response = client.post("/auth/refresh", cookies={"refresh_token": token})
     assert response.status_code == 401
 
 
-def test_refresh_with_expired_token_returns_401(client):
+def test_refresh_with_expired_cookie_returns_401(client):
     settings = get_settings()
     payload = {
         "sub": str(uuid.uuid4()),
@@ -175,7 +189,7 @@ def test_refresh_with_expired_token_returns_401(client):
         "exp": datetime.now(timezone.utc) - timedelta(seconds=1),
     }
     expired = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
-    response = client.post("/auth/refresh", json={"refresh_token": expired})
+    response = client.post("/auth/refresh", cookies={"refresh_token": expired})
     assert response.status_code == 401
 
 
@@ -184,7 +198,7 @@ def test_refresh_for_inactive_user_returns_401(client, mock_db):
     user.is_active = False
     mock_db.execute.return_value = ScalarResult(user)
     token = create_refresh_token(user.id)
-    response = client.post("/auth/refresh", json={"refresh_token": token})
+    response = client.post("/auth/refresh", cookies={"refresh_token": token})
     assert response.status_code == 401
 
 
@@ -193,7 +207,7 @@ def test_new_access_token_accesses_protected_endpoint(client, mock_db):
     mock_db.execute.return_value = ScalarResult(user)
     token = create_refresh_token(user.id)
 
-    refresh_response = client.post("/auth/refresh", json={"refresh_token": token})
+    refresh_response = client.post("/auth/refresh", cookies={"refresh_token": token})
     assert refresh_response.status_code == 200
     new_access_token = refresh_response.json()["access_token"]
 

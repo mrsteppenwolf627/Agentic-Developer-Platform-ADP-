@@ -1,26 +1,53 @@
-import React, { useState } from 'react';
-import { TicketList } from '../components/TicketList';
-import { TicketDetail } from '../components/TicketDetail';
+import { useEffect } from 'react';
+import { Header } from '../components/common/Header';
+import { TaskTable } from '../components/dashboard/TaskTable';
+import { CreateTaskForm } from '../components/dashboard/CreateTaskForm';
+import { TaskStats } from '../components/dashboard/TaskStats';
+import { UserProfile } from '../components/dashboard/UserProfile';
+import { useAuthStore } from '../store/authStore';
+import { motion } from 'framer-motion';
 
-export const Dashboard: React.FC = () => {
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+export const Dashboard = () => {
+  const { user } = useAuthStore();
 
   return (
-    <div className="flex h-full bg-gray-50">
-      <div className="w-1/3 min-w-[320px] max-w-sm border-r border-gray-200 bg-white overflow-y-auto shadow-sm z-10">
-        <TicketList onSelect={setSelectedTicketId} selectedId={selectedTicketId} />
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        {selectedTicketId ? (
-          <TicketDetail ticketId={selectedTicketId} />
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center text-gray-400 p-8 text-center">
-            <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            <p className="text-xl font-medium text-gray-500">Select a ticket</p>
-            <p className="mt-2 text-sm">Choose a ticket from the sidebar to view its details and tasks.</p>
+    <div className="min-h-screen bg-[var(--bg-secondary)]">
+      <Header />
+      
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="w-full md:w-1/4">
+              <UserProfile />
+              <div className="bg-white p-4 rounded-xl border border-[var(--border)] shadow-[var(--shadow-light)]">
+                <h3 className="font-medium text-[var(--text-primary)] mb-2">Info</h3>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Aquí puedes administrar tus tareas y monitorear el progreso de los modelos de IA asignados.
+                </p>
+              </div>
+            </div>
+            
+            <div className="w-full md:w-3/4">
+              <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-6">
+                Panel de Control
+              </h2>
+              
+              <TaskStats />
+              
+              <div className="bg-white p-6 rounded-xl border border-[var(--border)] shadow-[var(--shadow-light)]">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Tus Tareas</h3>
+                  <CreateTaskForm />
+                </div>
+                <TaskTable />
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </motion.div>
+      </main>
     </div>
   );
 };

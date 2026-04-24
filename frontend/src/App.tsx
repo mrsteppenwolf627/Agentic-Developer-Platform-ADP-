@@ -1,21 +1,54 @@
-import React from 'react';
-import { Dashboard } from './pages/Dashboard';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Toaster } from 'sonner';
 
-const App: React.FC = () => {
+import { SessionExpiredModal } from './components/auth/SessionExpiredModal';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { Dashboard } from './pages/Dashboard';
+import { Login } from './pages/Login';
+import { NotFound } from './pages/NotFound';
+import { Register } from './pages/Register';
+import { useAuthStore } from './store/authStore';
+
+function AppRoutes() {
+  // Placeholder while the auth interceptor wires the real session-expired flow.
+  const showExpired = false;
+
   return (
-    <div className="min-h-screen flex flex-col text-gray-900 font-sans bg-gray-100">
-      <header className="bg-slate-900 text-white p-4 shadow-md z-20">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-          <h1 className="text-xl font-bold tracking-tight">Agentic Developer Platform</h1>
-          <span className="ml-2 px-2 py-0.5 rounded text-xs font-bold bg-indigo-500/30 text-indigo-300 border border-indigo-500/50">v0.1</span>
-        </div>
-      </header>
-      <main className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
-        <Dashboard />
-      </main>
-    </div>
+    <>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+
+      <SessionExpiredModal isOpen={showExpired} onClose={() => {}} />
+      <Toaster position="top-right" />
+    </>
   );
-};
+}
+
+function App() {
+  const { hydrate } = useAuthStore();
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
+}
 
 export default App;

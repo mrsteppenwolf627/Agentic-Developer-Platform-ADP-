@@ -9,8 +9,6 @@ Model names follow LiteLLM conventions:
   - Codex   : "openai/gpt-4o"       (OpenAI SDK via LiteLLM)
 """
 from __future__ import annotations
-
-import os
 from functools import lru_cache
 from typing import Dict, List
 
@@ -24,16 +22,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        populate_by_name=True,
     )
 
     # ------------------------------------------------------------------
     # Database (ADR-001)
     # ------------------------------------------------------------------
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/adp",
+        default="",
+        alias="DATABASE_URL",
         description="asyncpg URL for runtime. Alembic auto-converts to psycopg2.",
     )
-    sql_echo: bool = Field(default=False)
+    sql_echo: bool = Field(default=False, alias="SQL_ECHO")
 
     # ------------------------------------------------------------------
     # LLM API keys (ADR-002 — never hardcoded)
@@ -163,6 +163,22 @@ class Settings(BaseSettings):
         if value < 0:
             raise ValueError("RATE_LIMIT_PER_MINUTE must be >= 0")
         return value
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("DATABASE_URL must be set")
+        return value
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return self.database_url
+
+    @property
+    def SQL_ECHO(self) -> bool:
+        return self.sql_echo
 
     @property
     def is_production(self) -> bool:

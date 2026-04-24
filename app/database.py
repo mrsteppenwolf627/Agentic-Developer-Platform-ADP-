@@ -1,13 +1,8 @@
 """Async SQLAlchemy engine and session factory.
 
 Uses asyncpg driver for runtime (FastAPI).
-Alembic migrations use synchronous psycopg2 — see alembic/env.py.
-
-Environment variables:
-  DATABASE_URL — must use postgresql+asyncpg:// scheme for runtime.
-                 Supabase: postgresql+asyncpg://postgres:<password>@db.<project>.supabase.co:5432/postgres
+Alembic migrations use synchronous psycopg2; see alembic/env.py.
 """
-import os
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
@@ -16,17 +11,20 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.models import Base  # noqa: F401 — imported so metadata is populated
+from app.config import get_settings
+from app.models import Base  # noqa: F401
 
-_DATABASE_URL = os.environ.get("DATABASE_URL") or "postgresql+asyncpg://postgres:postgres@localhost:5432/adp"
+settings = get_settings()
+_DATABASE_URL = settings.DATABASE_URL
 
-# Ensure asyncpg driver for runtime
+# Ensure asyncpg driver for runtime.
 if _DATABASE_URL.startswith("postgresql://"):
     _DATABASE_URL = _DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 engine = create_async_engine(
     _DATABASE_URL,
-    echo=os.environ.get("SQL_ECHO", "false").lower() == "true",
+    echo=settings.SQL_ECHO,
+    future=True,
     pool_size=10,
     max_overflow=20,
     pool_pre_ping=True,
